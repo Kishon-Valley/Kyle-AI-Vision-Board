@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { AuthError, AuthResponse, Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -33,30 +34,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // On mount, try to restore session if Supabase is configured
   useEffect(() => {
-    if (!supabase) {
-      setIsLoading(false);
-      return;
-    }
-
-    const restoreSession = async () => {
+    // Check for active Supabase session
+    const getSession = async () => {
       setIsLoading(true);
+      
+      // Get session from Supabase
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (session) {
         const { user: supabaseUser } = session;
         setUserFromSupabase(supabaseUser);
       }
+      
       setIsLoading(false);
     };
-
-    restoreSession();
+    
+    getSession();
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setUserFromSupabase(session.user);
+        } else {
+          setUser(null);
+        }
+        setIsLoading(false);
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
-
+  
   // Helper function to set user from Supabase user object
   const setUserFromSupabase = (supabaseUser: SupabaseUser) => {
     const { id, email, user_metadata } = supabaseUser;
-
+    
     setUser({
       id,
       email,
@@ -65,41 +81,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  // ---------- Auth helpers that fallback gracefully if Supabase is unavailable ----------
   const login = async (email: string, password: string) => {
-    if (!supabase) {
-      return { error: { message: 'Auth disabled (missing Supabase).' } as any };
-    }
     setIsLoading(true);
-    const response = await supabase.auth.signInWithPassword({ email, password });
+    const response = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     setIsLoading(false);
     return { error: response.error };
   };
-
+  
   const signUpWithEmail = async (email: string, password: string) => {
-    if (!supabase) {
-      return { error: { message: 'Auth disabled (missing Supabase).' } as any };
-    }
     setIsLoading(true);
-    const response = await supabase.auth.signUp({ email, password });
+    const response = await supabase.auth.signUp({
+      email,
+      password,
+    });
     setIsLoading(false);
     return { error: response.error };
   };
-
+  
   const loginWithGoogle = async () => {
-    if (!supabase) return;
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` }
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
     });
   };
 
   const logout = async () => {
-    if (!supabase) {
-      setUser(null);
-      localStorage.removeItem('moodboards');
-      return;
-    }
     setIsLoading(true);
     await supabase.auth.signOut();
     setUser(null);
