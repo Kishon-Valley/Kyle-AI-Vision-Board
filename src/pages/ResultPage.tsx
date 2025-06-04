@@ -75,22 +75,55 @@ const ResultPage = () => {
         // Generate real mood board using OpenAI
         setIsGenerating(true);
         
-        // Step 1: Generate design description
-        const description = await generateDesignDescription({
-          roomType: questionnaireData.roomType,
-          designStyle: questionnaireData.designStyle,
-          colorPalette: questionnaireData.colorPalette || [],
-          budget: questionnaireData.budget
-        });
+        let description = '';
+        let imageUrl = '';
         
-        // Step 2: Generate image prompt
-        const imagePrompt = await generateImagePrompt(description, {
-          roomType: questionnaireData.roomType,
-          designStyle: questionnaireData.designStyle
-        });
+        try {
+          // Step 1: Generate design description
+          description = await generateDesignDescription({
+            roomType: questionnaireData.roomType,
+            designStyle: questionnaireData.designStyle,
+            colorPalette: questionnaireData.colorPalette || [],
+            budget: questionnaireData.budget
+          });
+          toast({
+            title: "Design Description Generated",
+            description: "Design description successfully generated. Generating image now..."
+          });
+        } catch (descError) {
+          console.error('Error generating design description:', descError);
+          toast({
+            title: "Design Description Failed",
+            description: "Failed to generate design description. Using fallback description.",
+            variant: "destructive"
+          });
+          // Create fallback description if API fails
+          description = `A beautiful ${questionnaireData.designStyle} ${questionnaireData.roomType} with ${questionnaireData.colorPalette?.join(', ') || 'complementary colors'}. The space features elegant furniture, appropriate lighting, and tasteful decor that aligns with the ${questionnaireData.designStyle} aesthetic while maintaining a ${questionnaireData.budget} budget.`;
+        }
         
-        // Step 3: Generate mood board image
-        const imageUrl = await generateMoodBoardImage(imagePrompt);
+        try {
+          // Step 2: Generate image prompt only if we have a description
+          const imagePrompt = await generateImagePrompt(description, {
+            roomType: questionnaireData.roomType,
+            designStyle: questionnaireData.designStyle
+          });
+          
+          // Step 3: Generate mood board image
+          imageUrl = await generateMoodBoardImage(imagePrompt);
+          toast({
+            title: "Image Generated",
+            description: "Mood board image successfully generated!"
+          });
+        } catch (imageError) {
+          console.error('Error generating image:', imageError);
+          toast({
+            title: "Image Generation Failed",
+            description: "Failed to generate mood board image. Using fallback image.",
+            variant: "destructive"
+          });
+          // Use a fallback image from Unsplash if API fails
+          imageUrl = "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1024&h=1024&fit=crop";
+        }
         
         // Create mood board object
         const newMoodBoard: MoodBoard = {
