@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -110,12 +109,13 @@ const HistoryPage = () => {
 
   const handleShare = async (moodBoard: MoodBoard) => {
     try {
+      const shareUrl = moodBoard.id ? `${window.location.origin}/share/${moodBoard.id}` : window.location.origin;
       if (navigator.share) {
         // Create personalized share content
         await navigator.share({
           title: `My ${moodBoard.style} ${moodBoard.room_type} Design by Vision Board AI`,
           text: `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI!`,
-          url: window.location.origin,
+          url: shareUrl,
         });
         
         toast({
@@ -124,7 +124,7 @@ const HistoryPage = () => {
         });
       } else {
         // Fallback for browsers without Web Share API
-        const shareText = `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI! ${window.location.origin}`;
+        const shareText = `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI! ${shareUrl}`;
         navigator.clipboard.writeText(shareText);
         
         toast({
