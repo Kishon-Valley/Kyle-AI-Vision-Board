@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '@/hooks/use-toast';
-import { Palette, User, LogOut, Calendar, Sun, Moon, Loader2 } from 'lucide-react';
+import { Palette, User, LogOut, Calendar, Sun, Moon, Loader2, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
   const { user, login, signUpWithEmail, loginWithGoogle, logout, isAuthenticated, isLoading } = useAuth();
@@ -16,6 +16,7 @@ const Navbar = () => {
   const { toast } = useToast();
   const location = useLocation();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -121,42 +122,71 @@ const Navbar = () => {
             <span className="text-xl font-bold">Kyle's Mood Board</span>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Mobile menu button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-slate-300 hover:text-orange-400 focus:outline-none"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
+
+          {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/"
-              className={`transition-colors ${
-                location.pathname === '/' 
-                  ? 'text-orange-400 font-medium' 
-                  : 'text-slate-300 hover:text-orange-400'
-              }`}
-            >
-              Home
-            </Link>
-            <Link
-              to="/questionnaire"
-              className={`transition-colors ${
-                location.pathname === '/questionnaire' 
-                  ? 'text-orange-400 font-medium' 
-                  : 'text-slate-300 hover:text-orange-400'
-              }`}
-            >
-              Create
-            </Link>
+            <NavLink to="/" label="Home" currentPath={location.pathname} />
+            <NavLink to="/questionnaire" label="Create" currentPath={location.pathname} />
             {isAuthenticated && (
-              <Link
-                to="/history"
-                className={`flex items-center space-x-1 transition-colors ${
-                  location.pathname === '/history' 
-                    ? 'text-orange-400 font-medium' 
-                    : 'text-slate-300 hover:text-orange-400'
-                }`}
-              >
-                <Calendar className="w-4 h-4" />
-                <span>My Boards</span>
-              </Link>
+              <NavLink 
+                to="/history" 
+                label={
+                  <span className="flex items-center space-x-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>My Boards</span>
+                  </span>
+                } 
+                currentPath={location.pathname} 
+              />
             )}
           </div>
+
+          {/* Mobile Navigation Menu */}
+          {isMobileMenuOpen && (
+            <div className="absolute top-16 left-0 right-0 bg-slate-800/95 dark:bg-slate-950/95 backdrop-blur-lg border-b border-slate-700/50 dark:border-slate-800/50 md:hidden z-40">
+              <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <MobileNavLink 
+                  to="/" 
+                  label="Home" 
+                  currentPath={location.pathname} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+                <MobileNavLink 
+                  to="/questionnaire" 
+                  label="Create" 
+                  currentPath={location.pathname} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+                {isAuthenticated && (
+                  <MobileNavLink 
+                    to="/history" 
+                    label={
+                      <span className="flex items-center space-x-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>My Boards</span>
+                      </span>
+                    } 
+                    currentPath={location.pathname} 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  />
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Theme Toggle and Auth Section */}
           <div className="flex items-center space-x-4">
@@ -370,5 +400,34 @@ const Navbar = () => {
     </nav>
   );
 };
+
+// Reusable NavLink component for desktop
+const NavLink = ({ to, label, currentPath }) => (
+  <Link
+    to={to}
+    className={`transition-colors ${
+      currentPath === to 
+        ? 'text-orange-400 font-medium' 
+        : 'text-slate-300 hover:text-orange-400'
+    }`}
+  >
+    {label}
+  </Link>
+);
+
+// Mobile NavLink component with different styling
+const MobileNavLink = ({ to, label, currentPath, onClick }) => (
+  <Link
+    to={to}
+    onClick={onClick}
+    className={`block px-3 py-2 rounded-md text-base font-medium ${
+      currentPath === to
+        ? 'bg-slate-700/50 text-orange-400'
+        : 'text-slate-300 hover:bg-slate-700/50 hover:text-orange-400'
+    }`}
+  >
+    {label}
+  </Link>
+);
 
 export default Navbar;
