@@ -219,16 +219,29 @@ const ResultPage = () => {
     if (!moodBoard?.image_url) return;
     
     try {
-      // First, try to share the image directly using the URL
-      if (navigator.share) {
-        // Create a direct link to the image
-        const imageUrl = moodBoard.image_url;
-        
-        // Try to share with the direct image URL first
+      // Fetch the image as a blob
+      const response = await fetch(moodBoard.image_url);
+      const blob = await response.blob();
+      const file = new File([blob], 'mood-board.jpg', { type: 'image/jpeg' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        // Share the image file directly if the Web Share API with files is supported
         await navigator.share({
           title: `My ${moodBoard.style} ${moodBoard.room_type} Design`,
           text: `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI!`,
-          url: imageUrl,
+          files: [file],
+        });
+        
+        toast({
+          title: "Shared Successfully",
+          description: "Your mood board image has been shared.",
+        });
+      } else if (navigator.share) {
+        // Fallback: Share the image URL if file sharing isn't supported
+        await navigator.share({
+          title: `My ${moodBoard.style} ${moodBoard.room_type} Design`,
+          text: `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI!`,
+          url: moodBoard.image_url,
         });
         
         toast({
@@ -236,7 +249,7 @@ const ResultPage = () => {
           description: "Your mood board has been shared.",
         });
       } else {
-        // Fallback: Copy the image URL to clipboard
+        // Fallback for browsers without Web Share API
         navigator.clipboard.writeText(moodBoard.image_url);
         
         toast({
@@ -246,28 +259,11 @@ const ResultPage = () => {
       }
     } catch (error) {
       console.error('Error sharing mood board:', error);
-      
-      // Try fallback method
-      try {
-        // Add a timestamp to bypass any caching issues
-        const timestamp = new Date().getTime();
-        const imageUrl = `${moodBoard.image_url}${moodBoard.image_url.includes('?') ? '&' : '?'}t=${timestamp}`;
-        
-        // Fallback to just copying the URL if the download fails
-        navigator.clipboard.writeText(imageUrl);
-        
-        toast({
-          title: "Image Link Copied",
-          description: "Direct sharing not available. Image link copied to clipboard.",
-        });
-      } catch (fallbackError) {
-        console.error('Fallback sharing failed:', fallbackError);
-        toast({
-          title: "Sharing Failed",
-          description: "Could not share the image. Please try downloading it instead.",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Share Failed",
+        description: "There was an error sharing your mood board. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +15,7 @@ import HistoryPage from "./pages/HistoryPage";
 import UserProfile from "./pages/UserProfile";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
+import SharePage from "./pages/SharePage";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +38,7 @@ const App = () => (
                   <Route path="/history" element={<HistoryPage />} />
                   <Route path="/profile" element={<UserProfile />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/share/:id" element={<SharePage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
