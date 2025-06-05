@@ -216,15 +216,32 @@ const ResultPage = () => {
   };
 
   const handleShare = async () => {
-    if (!moodBoard) return;
+    if (!moodBoard?.image_url) return;
     
     try {
-      if (navigator.share) {
-        // Create personalized share content
+      // Fetch the image as a blob
+      const response = await fetch(moodBoard.image_url);
+      const blob = await response.blob();
+      const file = new File([blob], 'mood-board.jpg', { type: 'image/jpeg' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        // Share the image file directly if the Web Share API with files is supported
         await navigator.share({
-          title: `My ${moodBoard.style} ${moodBoard.room_type} Design by Vision Board AI`,
+          title: `My ${moodBoard.style} ${moodBoard.room_type} Design`,
           text: `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI!`,
-          url: window.location.href,
+          files: [file],
+        });
+        
+        toast({
+          title: "Shared Successfully",
+          description: "Your mood board image has been shared.",
+        });
+      } else if (navigator.share) {
+        // Fallback: Share the image URL if file sharing isn't supported
+        await navigator.share({
+          title: `My ${moodBoard.style} ${moodBoard.room_type} Design`,
+          text: `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI!`,
+          url: moodBoard.image_url,
         });
         
         toast({
@@ -233,12 +250,11 @@ const ResultPage = () => {
         });
       } else {
         // Fallback for browsers without Web Share API
-        const shareText = `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI! ${window.location.href}`;
-        navigator.clipboard.writeText(shareText);
+        navigator.clipboard.writeText(moodBoard.image_url);
         
         toast({
-          title: "Link Copied",
-          description: "Share link copied to clipboard. Paste it in your favorite social media app!",
+          title: "Image Link Copied",
+          description: "Image link copied to clipboard. You can now paste it anywhere!",
         });
       }
     } catch (error) {
