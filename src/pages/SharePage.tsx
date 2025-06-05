@@ -21,7 +21,7 @@ const SharePage = () => {
 
       try {
         const { data, error } = await supabase
-          .from('moodboards')
+          .from('mood_boards')
           .select('*')
           .eq('id', id)
           .single();
