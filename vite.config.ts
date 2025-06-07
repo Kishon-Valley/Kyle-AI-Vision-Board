@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    strictPort: true,
+  },
+  preview: {
+    port: 8080,
+    strictPort: true,
   },
   plugins: [
     react(),
@@ -19,10 +24,11 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: true,
+    outDir: "dist",
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {
-          // Keep only the vendor chunk
           vendor: ['react', 'react-dom', 'react-router-dom']
         },
       },
@@ -30,10 +36,4 @@ export default defineConfig(({ mode }) => ({
     assetsInlineLimit: 4096,
     chunkSizeWarningLimit: 1000,
   },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
-  },
-  define: {
-    'process.env': process.env
-  }
 }));
