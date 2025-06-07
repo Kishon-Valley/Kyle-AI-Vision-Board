@@ -8,10 +8,6 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    proxy: {
-      // Rewrite all client-side routes to index.html
-      '^/(?!.*\\..+$).*': '/index.html'
-    }
   },
   plugins: [
     react(),
