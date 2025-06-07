@@ -22,8 +22,8 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@radix-ui/react-*'],
+          // Keep only the vendor chunk
+          vendor: ['react', 'react-dom', 'react-router-dom']
         },
       },
     },
@@ -37,4 +37,3 @@ export default defineConfig(({ mode }) => ({
     'process.env': process.env
   }
 }));
-
