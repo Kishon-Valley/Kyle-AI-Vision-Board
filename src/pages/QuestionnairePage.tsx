@@ -236,7 +236,7 @@ const QuestionnairePage = () => {
                         {budget.label}
                       </Label>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{budget.desc}</p>
+                    {/* Price description removed as per new requirements */}
                   </div>
                 </div>
               ))}
