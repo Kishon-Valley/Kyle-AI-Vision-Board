@@ -406,38 +406,21 @@ const ResultPage = () => {
           </Button>
         </div>
 
-        {/* Description */}
-        <Card className="mb-8 dark:bg-slate-800/80 dark:border-slate-700/50">
-          <CardContent className="p-6">
-            <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
-              Design Description
+        {/* Design Description */}
+        {moodBoard.description && (
+          <div className="mt-8 bg-white/80 dark:bg-slate-800/80 p-6 rounded-lg shadow-sm backdrop-blur-sm">
+            <h3 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">
+              Your Design Story
             </h3>
-            <div className="text-slate-600 dark:text-slate-300 leading-relaxed space-y-4">
-              <p className="font-medium">
-                Key Features of your {moodBoard.style} {moodBoard.room_type}:
-              </p>
-              <ul className="list-disc pl-6 space-y-2">
-                {moodBoard.description.split('. ').filter(Boolean).map((sentence, index) => (
-                  <li key={index}>{sentence.replace(/^\./, '').trim()}</li>
-                ))}
-              </ul>
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                <p className="font-medium">Color Palette:</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {moodBoard.color_palette?.map((color, index) => (
-                    <span 
-                      key={index}
-                      className="px-3 py-1 rounded-full text-xs font-medium"
-                      style={{ backgroundColor: getColorValue(color), color: getTextColor(color) }}
-                    >
-                      {color}
-                    </span>
-                  ))}
-                </div>
-              </div>
+            <div className="prose prose-slate dark:prose-invert max-w-none">
+              {moodBoard.description.split('\n').map((paragraph, i) => (
+                <p key={i} className="mb-4 last:mb-0">
+                  {paragraph}
+                </p>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
         {/* Navigation */}
         <div className="flex justify-between">
