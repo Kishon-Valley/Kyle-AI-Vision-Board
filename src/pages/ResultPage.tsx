@@ -414,40 +414,64 @@ const ResultPage = () => {
               Your Design Story
             </h3>
             <div className="prose prose-slate dark:prose-invert max-w-none">
-              {moodBoard.description.split('\n').map((paragraph, i) => {
-                // Check if the paragraph contains key design elements
-                const isKeyElement = paragraph.toLowerCase().includes('furniture') || 
-                                   paragraph.toLowerCase().includes('color') ||
-                                   paragraph.toLowerCase().includes('lighting') ||
-                                   paragraph.toLowerCase().includes('material') ||
-                                   paragraph.toLowerCase().includes('texture') ||
-                                   paragraph.toLowerCase().includes('decor');
+              {(() => {
+                // Split description into sentences
+                const sentences = moodBoard.description.split(/(?<=[.!?])\s+/);
+                // Use the first sentence as the intro
+                const intro = sentences[0];
+                // The rest as bullet points (grouped if possible)
+                const rest = sentences.slice(1).filter(Boolean);
 
-                if (isKeyElement) {
-                  // Format as a bullet point with a larger font for the key element
-                  const [keyElement, ...rest] = paragraph.split(':');
-                  return (
-                    <div key={i} className="mb-4 last:mb-0 flex items-start">
-                      <span className="text-orange-500 mr-2">•</span>
-                      <div>
-                        <span className="font-semibold text-lg text-slate-800 dark:text-white">
-                          {keyElement}:
-                        </span>
-                        <span className="text-slate-600 dark:text-slate-300">
-                          {rest.join(':')}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                } else {
-                  // Regular paragraph with slightly larger font
-                  return (
-                    <p key={i} className="mb-4 last:mb-0 text-lg text-slate-600 dark:text-slate-300">
-                      {paragraph}
-                    </p>
-                  );
+                // Try to group by keywords for headers
+                const keywords = [
+                  { key: 'furniture', label: 'Furniture' },
+                  { key: 'color', label: 'Color Palette' },
+                  { key: 'lighting', label: 'Lighting' },
+                  { key: 'material', label: 'Materials' },
+                  { key: 'texture', label: 'Textures' },
+                  { key: 'decor', label: 'Decor' },
+                  { key: 'budget', label: 'Budget' },
+                  { key: 'style', label: 'Style' },
+                  { key: 'space', label: 'Space' },
+                ];
+
+                // Group sentences by keyword
+                const points = [];
+                const used = new Set();
+                for (const { key, label } of keywords) {
+                  const found = rest.find(s => s.toLowerCase().includes(key));
+                  if (found) {
+                    points.push({ title: label, detail: found });
+                    used.add(found);
+                  }
                 }
-              })}
+                // Add any remaining sentences as generic points
+                rest.forEach(s => {
+                  if (!used.has(s)) {
+                    points.push({ title: '', detail: s });
+                  }
+                });
+
+                return (
+                  <>
+                    {/* Intro */}
+                    <p className="text-lg font-semibold text-slate-800 dark:text-white mb-4">
+                      {intro}
+                    </p>
+                    {/* Bullet points */}
+                    <ul className="list-disc pl-6 space-y-2">
+                      {points.map((point, idx) => (
+                        <li key={idx} className="text-base text-slate-700 dark:text-slate-200">
+                          {point.title && (
+                            <span className="font-bold text-slate-900 dark:text-white mr-1">{point.title}:</span>
+                          )}
+                          <span>{point.detail.trim()}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}
