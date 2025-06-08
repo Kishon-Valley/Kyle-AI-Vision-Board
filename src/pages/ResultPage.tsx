@@ -411,40 +411,78 @@ const ResultPage = () => {
           <div className="mt-12 bg-white/90 dark:bg-slate-800/90 p-8 rounded-2xl shadow-xl backdrop-blur-md space-y-8">
             <h3 className="text-3xl font-extrabold mb-8 text-slate-800 dark:text-white flex items-center">
               <Sparkles className="w-7 h-7 text-orange-500 mr-3" />
-              Your Design Story
+              Design Description
             </h3>
             <div className="space-y-8">
               {(() => {
                 const description = moodBoard.description;
-                // Detect sections marked with **Title:** style
-                const sectionRegex = /\*\*(.+?)\*\*:?/g;
-                const matches = [...description.matchAll(sectionRegex)];
-                if (matches.length > 0) {
-                  const introText = description.slice(0, matches[0].index).trim();
-                  const sections = matches.map((match, idx) => {
-                    const title = match[1].trim();
-                    const start = match.index! + match[0].length;
-                    const end = idx < matches.length - 1 ? matches[idx + 1].index! : description.length;
-                    const detail = description.slice(start, end).trim();
-                    return { title, detail };
-                  });
+                // List of common section headers to look for
+                const sectionHeaders = [
+                  'Color Palette',
+                  'Furniture Pieces',
+                  'Materials and Textures',
+                  'Lighting Suggestions',
+                  'Decorative Accents',
+                  'Budget',
+                  'Style',
+                  'Space',
+                  'Layout',
+                  'Walls',
+                  'Flooring',
+                  'Accessories',
+                  'Plants',
+                  'Windows',
+                  'Rugs',
+                  'Art',
+                  'Storage',
+                  'Technology',
+                  'Ambiance',
+                ];
+
+                // Build a regex to split at section headers (with or without colon)
+                const headerRegex = new RegExp(`(?:^|\n|\r|\s)((${sectionHeaders.join('|')}):)`, 'gi');
+                // Find all matches
+                let match;
+                let lastIndex = 0;
+                const sections = [];
+                let foundSection = false;
+                while ((match = headerRegex.exec(description)) !== null) {
+                  foundSection = true;
+                  const title = match[1].replace(/:$/, '').trim();
+                  const start = match.index + match[0].indexOf(match[1]);
+                  if (sections.length > 0) {
+                    // Previous section: set its detail
+                    sections[sections.length - 1].detail = description.slice(lastIndex, start).trim();
+                  } else if (start > 0) {
+                    // Intro text before first section
+                    sections.push({ title: '', detail: description.slice(0, start).trim() });
+                  }
+                  // Start new section
+                  sections.push({ title, detail: '' });
+                  lastIndex = start + match[1].length;
+                }
+                if (foundSection) {
+                  // Set detail for last section
+                  sections[sections.length - 1].detail = description.slice(lastIndex).trim();
+                  // Filter out empty sections
+                  const filteredSections = sections.filter(sec => sec.detail && sec.detail.length > 0 || sec.title === '');
                   return (
                     <div className="space-y-8">
-                      {/* Intro */}
-                      {introText && (
+                      {/* Intro paragraph if present */}
+                      {filteredSections[0].title === '' && filteredSections[0].detail && (
                         <p className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-6 leading-relaxed">
-                          {introText}
+                          {filteredSections[0].detail}
                         </p>
                       )}
-                      {/* Sectioned content */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {sections.map((sec, i) => {
+                        {filteredSections.filter(sec => sec.title).map((sec, i) => {
+                          // Split details into bullet points if possible
                           const points = sec.detail
                             .split(/(?<=[.!?])\s+/)
                             .map(p => p.trim())
                             .filter(Boolean);
                           return (
-                            <div key={i} className="bg-white/80 dark:bg-slate-800/80 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md flex flex-col min-h-[160px]">
+                            <div key={i} className="bg-white/80 dark:bg-slate-800/80 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md flex flex-col min-h-[120px]">
                               <h4 className="text-xl font-bold text-orange-600 dark:text-orange-400 mb-4 pb-2 border-b border-orange-100 dark:border-slate-700">
                                 {sec.title}
                               </h4>
@@ -463,43 +501,12 @@ const ResultPage = () => {
                     </div>
                   );
                 }
-                // Fallback: previous keyword grouping if no bold markers present
-                const sentences = description.split(/(?<=[.!?])\s+/);
-                const intro = sentences[0];
-                const rest = sentences.slice(1).filter(Boolean);
-                const points = rest.map((sentence, idx) => ({
-                  text: sentence,
-                  title: [
-                    { key: 'furniture', label: 'Furniture' },
-                    { key: 'color', label: 'Color Palette' },
-                    { key: 'lighting', label: 'Lighting' },
-                    { key: 'material', label: 'Materials' },
-                    { key: 'texture', label: 'Textures' },
-                    { key: 'decor', label: 'Decor' },
-                    { key: 'budget', label: 'Budget' },
-                    { key: 'style', label: 'Style' },
-                    { key: 'space', label: 'Space' },
-                  ].find(({ key }) => sentence.toLowerCase().includes(key))?.label || ''
-                }));
+                // If no section headers found, display as a well-spaced paragraph
                 return (
-                  <div className="space-y-8">
-                    <p className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-6 leading-relaxed">
-                      {intro}
+                  <div className="space-y-6">
+                    <p className="text-lg font-semibold text-slate-700 dark:text-slate-200 leading-relaxed">
+                      {description}
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {points.map((point, idx) => (
-                        <div key={idx} className="bg-white/80 dark:bg-slate-800/80 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md flex flex-col min-h-[120px]">
-                          {point.title && (
-                            <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                              {point.title}
-                            </h4>
-                          )}
-                          <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-                            {point.text}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 );
               })()}
