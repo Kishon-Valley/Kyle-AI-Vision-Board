@@ -10,7 +10,7 @@ const Footer = () => {
           <div>
             <div className="flex items-center justify-center space-x-2 mb-3">
               <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-                 Moodboard Generator
+                 Moodboard GeneratorX
               </span>
             </div>
             <p className="text-slate-400 mb-4 max-w-md mx-auto">
