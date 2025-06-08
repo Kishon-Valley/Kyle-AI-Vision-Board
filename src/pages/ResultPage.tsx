@@ -9,6 +9,7 @@ import { saveMoodBoard, MoodBoard as MoodBoardType } from '../lib/moodboards';
 import { generateDesignDescription, generateImagePrompt, generateMoodBoardImage } from '../lib/openai';
 import { getColorValue, getTextColor } from '@/lib/colors';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import ReactMarkdown from 'react-markdown';
 
 // Using the type from moodboards.ts for consistency
 type MoodBoard = MoodBoardType & {
@@ -417,17 +418,14 @@ const ResultPage = () => {
             </h3>
             <div className="space-y-8">
               {(() => {
-                // Sanitize markdown bold markers for easier parsing
-                const description = moodBoard.description.replace(/\*\*/g, "");
-                // Determine primary accent color from palette or default orange
-                const primaryColor = getColorValue(Array.isArray(moodBoard.color_palette) && moodBoard.color_palette.length ? moodBoard.color_palette[0] : '#f97316');
                 // List of common section headers to look for
                 const sectionHeaders = [
                   'Color Palette',
+                  'Materials',
                   'Furniture Pieces',
-                  'Materials and Textures',
-                  'Lighting Suggestions',
-                  'Decorative Accents',
+                  'Textures',
+                  'Lighting',
+                  'Decor Elements',
                   'Budget',
                   'Style',
                   'Space',
@@ -445,42 +443,52 @@ const ResultPage = () => {
                 ];
 
                 // Allow optional numbered prefixes (e.g., "1. Color Palette:")
-                const headerRegex = new RegExp(`(?:^|\n|\r)\s*(?:\\d+\\.\\s*)?((${sectionHeaders.join('|')})\\s*:)`, 'gi');
+                const headerRegex = new RegExp(`(?:^|\n|\r)\\s*(?:\\d+\\.\\s*)?((${sectionHeaders.join('|')})\\s*:)`, 'gi');
+                
                 // Find all matches
                 let match;
                 let lastIndex = 0;
                 const sections = [];
                 let foundSection = false;
-                while ((match = headerRegex.exec(description)) !== null) {
+                
+                while ((match = headerRegex.exec(moodBoard.description)) !== null) {
                   foundSection = true;
                   const title = match[1].replace(/:$/, '').trim();
                   const start = match.index + match[0].indexOf(match[1]);
+                  
                   if (sections.length > 0) {
                     // Previous section: set its detail
-                    sections[sections.length - 1].detail = description.slice(lastIndex, start).trim();
+                    sections[sections.length - 1].detail = moodBoard.description.slice(lastIndex, start).trim();
                   } else if (start > 0) {
                     // Intro text before first section
-                    sections.push({ title: '', detail: description.slice(0, start).trim() });
+                    sections.push({ title: '', detail: moodBoard.description.slice(0, start).trim() });
                   }
+                  
                   // Start new section
                   sections.push({ title, detail: '' });
                   lastIndex = start + match[1].length;
                 }
+                
                 if (foundSection) {
                   // Set detail for last section
-                  sections[sections.length - 1].detail = description.slice(lastIndex).trim();
+                  sections[sections.length - 1].detail = moodBoard.description.slice(lastIndex).trim();
+                  
                   // Filter out empty sections
                   const filteredSections = sections.filter(sec => sec.detail && sec.detail.length > 0 || sec.title === '');
+                  
                   return (
                     <div className="space-y-8">
                       {/* Intro paragraph if present */}
                       {filteredSections[0].title === '' && filteredSections[0].detail && (
-                        <p className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-6 leading-relaxed">
-                          {filteredSections[0].detail}
-                        </p>
+                        <div className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-6 leading-relaxed prose dark:prose-invert max-w-none">
+                          <ReactMarkdown>{filteredSections[0].detail}</ReactMarkdown>
+                        </div>
                       )}
+                      
                       <Accordion type="multiple" className="w-full">
                         {filteredSections.filter(sec => sec.title).map((sec, i) => {
+                          const primaryColor = getColorValue(Array.isArray(moodBoard.color_palette) && moodBoard.color_palette.length ? moodBoard.color_palette[0] : '#f97316');
+                          
                           return (
                             <AccordionItem key={i} value={`section-${i}`} className="border border-slate-200 dark:border-slate-700 rounded-xl mb-4">
                               <AccordionTrigger
@@ -490,30 +498,9 @@ const ResultPage = () => {
                                 {sec.title}
                               </AccordionTrigger>
                               <AccordionContent className="bg-white/80 dark:bg-slate-800/80 px-6 pb-6">
-                                <ul className="space-y-3">
-                                  {(() => {
-                                    // Build bullet points: first try dash-prefixed list, fallback to sentence split
-                                    let points: string[] = [];
-                                    if (/[-•]\s+/.test(sec.detail)) {
-                                      points = sec.detail
-                                        .split(/\s*[-•]\s+/)
-                                        .map(p => p.trim())
-                                        .filter(Boolean);
-                                    } else {
-                                      points = sec.detail
-                                        .split(/(?<=[.!?])\s+/)
-                                        .map(p => p.trim())
-                                        .filter(Boolean);
-                                    }
-                                    return points.map((pt, idx) => (
-                                      <li key={idx} className="flex items-start space-x-3" >
-                                        {/* colored bullet */}
-                                        <span className="mt-1" style={{ color: primaryColor }}>●</span>
-                                        <span className="text-base text-slate-700 dark:text-slate-200 leading-relaxed">{pt}</span>
-                                      </li>
-                                    ));
-                                  })()}
-                                </ul>
+                                <div className="prose dark:prose-invert max-w-none">
+                                  <ReactMarkdown>{sec.detail}</ReactMarkdown>
+                                </div>
                               </AccordionContent>
                             </AccordionItem>
                           );
@@ -522,22 +509,11 @@ const ResultPage = () => {
                     </div>
                   );
                 }
-                // If no section headers found, display as separate paragraphs for better readability
-                const sentences = description
-                  .split(/(?<=[.!?])\s+/)
-                  .map(s => s.trim())
-                  .filter(Boolean);
-
+                
+                // If no section headers found, display as a single markdown block
                 return (
-                  <div className="space-y-4">
-                    {sentences.map((sentence, idx) => (
-                      <p
-                        key={idx}
-                        className="text-base text-slate-700 dark:text-slate-200 leading-relaxed"
-                      >
-                        {sentence}
-                      </p>
-                    ))}
+                  <div className="prose dark:prose-invert max-w-none">
+                    <ReactMarkdown>{moodBoard.description}</ReactMarkdown>
                   </div>
                 );
               })()}
