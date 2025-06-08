@@ -417,9 +417,12 @@ const ResultPage = () => {
               {(() => {
                 // Split description into sentences
                 const sentences = moodBoard.description.split(/(?<=[.!?])\s+/);
+                // Use the first sentence as the intro
                 const intro = sentences[0];
+                // The rest as bullet points (grouped if possible)
                 const rest = sentences.slice(1).filter(Boolean);
 
+                // Try to group by keywords for headers
                 const keywords = [
                   { key: 'furniture', label: 'Furniture' },
                   { key: 'color', label: 'Color Palette' },
@@ -432,47 +435,40 @@ const ResultPage = () => {
                   { key: 'space', label: 'Space' },
                 ];
 
-                // Group sentences into categorized sections
-                const sections: Record<string, string[]> = {};
-                rest.forEach(sentence => {
-                  let matched = false;
-                  for (const { key, label } of keywords) {
-                    if (sentence.toLowerCase().includes(key)) {
-                      (sections[label] ??= []).push(sentence);
-                      matched = true;
-                      break;
-                    }
+                // Group sentences by keyword
+                const points = [];
+                const used = new Set();
+                for (const { key, label } of keywords) {
+                  const found = rest.find(s => s.toLowerCase().includes(key));
+                  if (found) {
+                    points.push({ title: label, detail: found });
+                    used.add(found);
                   }
-                  if (!matched) {
-                    (sections['Details'] ??= []).push(sentence);
+                }
+                // Add any remaining sentences as generic points
+                rest.forEach(s => {
+                  if (!used.has(s)) {
+                    points.push({ title: '', detail: s });
                   }
                 });
 
                 return (
                   <>
                     {/* Intro */}
-                    <p className="text-lg font-semibold text-slate-800 dark:text-white mb-6">
+                    <p className="text-lg font-semibold text-slate-800 dark:text-white mb-4">
                       {intro}
                     </p>
-
-                    {/* Categorised bullet points */}
-                    {Object.entries(sections).map(([title, details]) => (
-                      <div key={title} className="mb-4">
-                        <h4 className="text-base lg:text-lg font-bold text-slate-900 dark:text-white mb-2">
-                          {title}
-                        </h4>
-                        <ul className="list-disc pl-6 space-y-1">
-                          {details.map((d, idx) => (
-                            <li
-                              key={idx}
-                              className="text-base text-slate-700 dark:text-slate-200"
-                            >
-                              {d.trim()}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                    {/* Bullet points */}
+                    <ul className="list-disc pl-6 space-y-2">
+                      {points.map((point, idx) => (
+                        <li key={idx} className="text-base text-slate-700 dark:text-slate-200">
+                          {point.title && (
+                            <span className="font-bold text-slate-900 dark:text-white mr-1">{point.title}:</span>
+                          )}
+                          <span>{point.detail.trim()}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </>
                 );
               })()}
