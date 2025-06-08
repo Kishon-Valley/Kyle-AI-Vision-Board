@@ -8,6 +8,7 @@ import { Download, Share, Heart, ArrowLeft, Sparkles, RefreshCw } from 'lucide-r
 import { saveMoodBoard, MoodBoard as MoodBoardType } from '../lib/moodboards';
 import { generateDesignDescription, generateImagePrompt, generateMoodBoardImage } from '../lib/openai';
 import { getColorValue, getTextColor } from '@/lib/colors';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
 // Using the type from moodboards.ts for consistency
 type MoodBoard = MoodBoardType & {
@@ -474,39 +475,49 @@ const ResultPage = () => {
                           {filteredSections[0].detail}
                         </p>
                       )}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Accordion type="multiple" className="w-full">
                         {filteredSections.filter(sec => sec.title).map((sec, i) => {
-                          // Split details into bullet points if possible
                           const points = sec.detail
                             .split(/(?<=[.!?])\s+/)
                             .map(p => p.trim())
                             .filter(Boolean);
                           return (
-                            <div key={i} className="bg-white/80 dark:bg-slate-800/80 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md flex flex-col min-h-[120px]">
-                              <h4 className="text-xl font-bold text-orange-600 dark:text-orange-400 mb-4 pb-2 border-b border-orange-100 dark:border-slate-700">
+                            <AccordionItem key={i} value={`section-${i}`} className="border border-slate-200 dark:border-slate-700 rounded-xl mb-4">
+                              <AccordionTrigger className="text-lg font-bold text-orange-600 dark:text-orange-400 py-4 px-6">
                                 {sec.title}
-                              </h4>
-                              <ul className="space-y-3 pl-1">
-                                {points.map((pt, idx) => (
-                                  <li key={idx} className="flex items-start">
-                                    <span className="flex-shrink-0 w-2 h-2 mt-2.5 mr-3 rounded-full bg-orange-400"></span>
-                                    <span className="text-base text-slate-700 dark:text-slate-200 leading-relaxed">{pt}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="bg-white/80 dark:bg-slate-800/80 px-6 pb-6">
+                                <ul className="list-disc pl-4 space-y-3">
+                                  {points.map((pt, idx) => (
+                                    <li key={idx} className="text-base text-slate-700 dark:text-slate-200 leading-relaxed">
+                                      {pt}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </AccordionContent>
+                            </AccordionItem>
                           );
                         })}
-                      </div>
+                      </Accordion>
                     </div>
                   );
                 }
-                // If no section headers found, display as a well-spaced paragraph
+                // If no section headers found, display as separate paragraphs for better readability
+                const sentences = description
+                  .split(/(?<=[.!?])\s+/)
+                  .map(s => s.trim())
+                  .filter(Boolean);
+
                 return (
-                  <div className="space-y-6">
-                    <p className="text-lg font-semibold text-slate-700 dark:text-slate-200 leading-relaxed">
-                      {description}
-                    </p>
+                  <div className="space-y-4">
+                    {sentences.map((sentence, idx) => (
+                      <p
+                        key={idx}
+                        className="text-base text-slate-700 dark:text-slate-200 leading-relaxed"
+                      >
+                        {sentence}
+                      </p>
+                    ))}
                   </div>
                 );
               })()}
