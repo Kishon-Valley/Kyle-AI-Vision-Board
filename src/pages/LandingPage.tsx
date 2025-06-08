@@ -10,18 +10,18 @@ const LandingPage = () => {
   const sampleMoodboards = [
     {
       id: 1,
-      image: "https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&h=300&fit=crop",
-      style: "Modern Minimalist"
+      image: "/bohemian-dining-room-moodboard%20(1).jpg",
+      style: "Bohemian Dining Room"
     },
     {
       id: 2,
-      image: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=400&h=300&fit=crop",
-      style: "Bohemian Chic"
+      image: "/contemporary-bedroom-moodboard.jpg",
+      style: "Contemporary Bedroom"
     },
     {
       id: 3,
-      image: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&h=300&fit=crop",
-      style: "Industrial Loft"
+      image: "/scandinavian-kitchen-moodboard.jpg",
+      style: "Scandinavian Kitchen"
     }
   ];
 
