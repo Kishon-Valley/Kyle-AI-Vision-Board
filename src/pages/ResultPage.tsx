@@ -411,12 +411,16 @@ const ResultPage = () => {
         {moodBoard.description && (
           <div className="mt-12 bg-white/90 dark:bg-slate-800/90 p-8 rounded-2xl shadow-xl backdrop-blur-md space-y-8">
             <h3 className="text-3xl font-extrabold mb-8 text-slate-800 dark:text-white flex items-center">
-              <Sparkles className="w-7 h-7 text-orange-500 mr-3" />
+              {/* Use dynamic accent color */}
+              <Sparkles className="w-7 h-7 mr-3" style={{ color: getColorValue((moodBoard.color_palette?.[0] as string) || '#f97316') }} />
               Design Description
             </h3>
             <div className="space-y-8">
               {(() => {
-                const description = moodBoard.description;
+                // Sanitize markdown bold markers for easier parsing
+                const description = moodBoard.description.replace(/\*\*/g, "");
+                // Determine primary accent color from palette or default orange
+                const primaryColor = getColorValue(Array.isArray(moodBoard.color_palette) && moodBoard.color_palette.length ? moodBoard.color_palette[0] : '#f97316');
                 // List of common section headers to look for
                 const sectionHeaders = [
                   'Color Palette',
@@ -440,8 +444,8 @@ const ResultPage = () => {
                   'Ambiance',
                 ];
 
-                // Build a regex to split at section headers (with or without colon)
-                const headerRegex = new RegExp(`(?:^|\n|\r|\s)((${sectionHeaders.join('|')}):)`, 'gi');
+                // Allow optional numbered prefixes (e.g., "1. Color Palette:")
+                const headerRegex = new RegExp(`(?:^|\n|\r)\s*(?:\\d+\\.\\s*)?((${sectionHeaders.join('|')})\\s*:)`, 'gi');
                 // Find all matches
                 let match;
                 let lastIndex = 0;
@@ -477,22 +481,38 @@ const ResultPage = () => {
                       )}
                       <Accordion type="multiple" className="w-full">
                         {filteredSections.filter(sec => sec.title).map((sec, i) => {
-                          const points = sec.detail
-                            .split(/(?<=[.!?])\s+/)
-                            .map(p => p.trim())
-                            .filter(Boolean);
                           return (
                             <AccordionItem key={i} value={`section-${i}`} className="border border-slate-200 dark:border-slate-700 rounded-xl mb-4">
-                              <AccordionTrigger className="text-lg font-bold text-orange-600 dark:text-orange-400 py-4 px-6">
+                              <AccordionTrigger
+                                className="text-lg font-bold py-4 px-6"
+                                style={{ color: primaryColor }}
+                              >
                                 {sec.title}
                               </AccordionTrigger>
                               <AccordionContent className="bg-white/80 dark:bg-slate-800/80 px-6 pb-6">
-                                <ul className="list-disc pl-4 space-y-3">
-                                  {points.map((pt, idx) => (
-                                    <li key={idx} className="text-base text-slate-700 dark:text-slate-200 leading-relaxed">
-                                      {pt}
-                                    </li>
-                                  ))}
+                                <ul className="space-y-3">
+                                  {(() => {
+                                    // Build bullet points: first try dash-prefixed list, fallback to sentence split
+                                    let points: string[] = [];
+                                    if (/[-•]\s+/.test(sec.detail)) {
+                                      points = sec.detail
+                                        .split(/\s*[-•]\s+/)
+                                        .map(p => p.trim())
+                                        .filter(Boolean);
+                                    } else {
+                                      points = sec.detail
+                                        .split(/(?<=[.!?])\s+/)
+                                        .map(p => p.trim())
+                                        .filter(Boolean);
+                                    }
+                                    return points.map((pt, idx) => (
+                                      <li key={idx} className="flex items-start space-x-3" >
+                                        {/* colored bullet */}
+                                        <span className="mt-1" style={{ color: primaryColor }}>●</span>
+                                        <span className="text-base text-slate-700 dark:text-slate-200 leading-relaxed">{pt}</span>
+                                      </li>
+                                    ));
+                                  })()}
                                 </ul>
                               </AccordionContent>
                             </AccordionItem>
