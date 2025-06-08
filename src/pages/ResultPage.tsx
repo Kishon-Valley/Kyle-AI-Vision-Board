@@ -420,11 +420,11 @@ const ResultPage = () => {
               {(() => {
                 // List of common section headers to look for
                 const sectionHeaders = [
+                  'Design Concept',
                   'Color Palette',
                   'Materials',
                   'Furniture Pieces',
                   'Textures',
-                  'Lighting',
                   'Decor Elements',
                   'Budget',
                   'Style',
@@ -441,6 +441,17 @@ const ResultPage = () => {
                   'Technology',
                   'Ambiance',
                 ];
+
+                // Define colors for different section types
+                const sectionColors = {
+                  'Design Concept': '#FF6B6B', // Coral Red
+                  'Color Palette': '#4ECDC4', // Turquoise
+                  'Materials': '#45B7D1', // Sky Blue
+                  'Furniture Pieces': '#96CEB4', // Sage Green
+                  'Textures': '#FFD93D', // Golden Yellow
+                  'Decor Elements': '#FF8B94', // Soft Pink
+                  'default': '#f97316' // Default Orange
+                };
 
                 // Allow optional numbered prefixes (e.g., "1. Color Palette:")
                 const headerRegex = new RegExp(`(?:^|\n|\r)\\s*(?:\\d+\\.\\s*)?((${sectionHeaders.join('|')})\\s*:)`, 'gi');
@@ -487,15 +498,23 @@ const ResultPage = () => {
                       
                       <Accordion type="multiple" className="w-full">
                         {filteredSections.filter(sec => sec.title).map((sec, i) => {
-                          const primaryColor = getColorValue(Array.isArray(moodBoard.color_palette) && moodBoard.color_palette.length ? moodBoard.color_palette[0] : '#f97316');
+                          const sectionColor = sectionColors[sec.title as keyof typeof sectionColors] || sectionColors.default;
                           
                           return (
                             <AccordionItem key={i} value={`section-${i}`} className="border border-slate-200 dark:border-slate-700 rounded-xl mb-4">
                               <AccordionTrigger
-                                className="text-lg font-bold py-4 px-6"
-                                style={{ color: primaryColor }}
+                                className="text-lg font-bold py-4 px-6 hover:no-underline"
+                                style={{ 
+                                  color: sectionColor,
+                                  backgroundColor: `${sectionColor}15`, // 15% opacity background
+                                  borderRadius: '0.5rem',
+                                  margin: '0.5rem',
+                                  transition: 'all 0.2s ease-in-out'
+                                }}
                               >
-                                {sec.title}
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-extrabold">{sec.title}</span>
+                                </div>
                               </AccordionTrigger>
                               <AccordionContent className="bg-white/80 dark:bg-slate-800/80 px-6 pb-6">
                                 <div className="prose dark:prose-invert max-w-none">
