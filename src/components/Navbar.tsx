@@ -119,7 +119,7 @@ const Navbar = () => {
             className="flex items-center space-x-2 text-white hover:text-orange-400 transition-colors"
           >
             <Palette className="w-8 h-8 text-orange-500" />
-            <span className="text-xl font-bold">Kyle's Mood Board</span>
+            <span className="text-xl font-bold">Moodboard Generator</span>
           </Link>
 
           {/* Mobile menu button */}
@@ -233,7 +233,7 @@ const Navbar = () => {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Welcome to Kyle's Mood Board</DialogTitle>
+                    <DialogTitle>Welcome  AI-powered Moodboard Generator</DialogTitle>
                     <DialogDescription>
                       Sign in to save your mood boards and access your history.
                     </DialogDescription>

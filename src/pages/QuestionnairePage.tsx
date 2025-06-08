@@ -210,7 +210,7 @@ const QuestionnairePage = () => {
                 <span className="text-white font-bold text-lg">$</span>
               </div>
               <h3 className="text-2xl font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                What's your budget range?
+              What finish level feels right to you?
               </h3>
               <p className="text-slate-600 dark:text-slate-300">
                 This helps us suggest appropriate furniture and decor
@@ -222,10 +222,10 @@ const QuestionnairePage = () => {
               className="space-y-3"
             >
               {[
-                { value: 'budget', label: 'Budget-Friendly', desc: 'Under $2,000', gradient: 'from-green-400 to-emerald-400' },
-                { value: 'moderate', label: 'Moderate', desc: '$2,000 - $5,000', gradient: 'from-yellow-400 to-orange-400' },
-                { value: 'comfortable', label: 'Comfortable', desc: '$5,000 - $10,000', gradient: 'from-orange-400 to-red-400' },
-                { value: 'luxury', label: 'Luxury', desc: '$10,000+', gradient: 'from-purple-400 to-pink-400' }
+                { value: 'budget', label: 'Budget-Friendly', desc: 'Under 2,000', gradient: 'from-green-400 to-emerald-400' },
+                { value: 'moderate', label: 'Moderate', desc: '2,000 - 5,000', gradient: 'from-yellow-400 to-orange-400' },
+                { value: 'comfortable', label: 'Comfortable', desc: '5,000 - 10,000', gradient: 'from-orange-400 to-red-400' },
+                { value: 'luxury', label: 'Luxury', desc: '10,000+', gradient: 'from-purple-400 to-pink-400' }
               ].map((budget) => (
                 <div key={budget.value} className="flex items-start space-x-3 p-4 bg-white/30 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-slate-600/50 rounded-lg hover:bg-white/50 dark:hover:bg-slate-700/90 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg">
                   <RadioGroupItem value={budget.value} id={budget.value} className="mt-1" />
