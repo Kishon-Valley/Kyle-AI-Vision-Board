@@ -23,3 +23,23 @@ export function getColorValue(color: string): string {
   const lowerColor = color.toLowerCase();
   return colorMap[lowerColor] || '#cccccc'; // Default to gray if not found
 }
+
+/**
+ * Determines whether black or white text would have better contrast on a given background color
+ * @param bgColor - The background color (hex, rgb, or color name)
+ * @returns '#000000' (black) for light backgrounds, '#ffffff' (white) for dark backgrounds
+ */
+export function getTextColor(bgColor: string): string {
+  const hex = getColorValue(bgColor);
+  
+  // Convert hex to RGB
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  
+  // Calculate relative luminance (perceived brightness)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // Return black for light colors, white for dark colors
+  return luminance > 0.5 ? '#000000' : '#ffffff';
+}

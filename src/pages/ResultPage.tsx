@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Download, Share, Heart, ArrowLeft, Sparkles, RefreshCw } from 'lucide-react';
 import { saveMoodBoard, MoodBoard as MoodBoardType } from '../lib/moodboards';
 import { generateDesignDescription, generateImagePrompt, generateMoodBoardImage } from '../lib/openai';
-import { getColorValue } from '@/lib/colors';
+import { getColorValue, getTextColor } from '@/lib/colors';
 
 // Using the type from moodboards.ts for consistency
 type MoodBoard = MoodBoardType & {
