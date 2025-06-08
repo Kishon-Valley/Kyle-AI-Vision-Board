@@ -30,7 +30,8 @@ const SharePage = () => {
         setMoodBoard(data);
       } catch (error) {
         console.error('Error fetching mood board:', error);
-        navigate('/');
+        // Stay on the page and let the UI show a not-found message instead of redirecting
+        setMoodBoard(null);
       } finally {
         setIsLoading(false);
       }
