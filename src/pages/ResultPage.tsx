@@ -408,23 +408,19 @@ const ResultPage = () => {
 
         {/* Design Description */}
         {moodBoard.description && (
-          <div className="mt-8 bg-white/80 dark:bg-slate-800/80 p-6 rounded-lg shadow-sm backdrop-blur-sm">
-            <h3 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white flex items-center">
-              <Sparkles className="w-6 h-6 text-orange-500 mr-2" />
+          <div className="mt-12 bg-white/90 dark:bg-slate-800/90 p-8 rounded-2xl shadow-xl backdrop-blur-md space-y-8">
+            <h3 className="text-3xl font-extrabold mb-8 text-slate-800 dark:text-white flex items-center">
+              <Sparkles className="w-7 h-7 text-orange-500 mr-3" />
               Your Design Story
             </h3>
-            <div className="space-y-6">
+            <div className="space-y-8">
               {(() => {
                 const description = moodBoard.description;
-
                 // Detect sections marked with **Title:** style
                 const sectionRegex = /\*\*(.+?)\*\*:?/g;
                 const matches = [...description.matchAll(sectionRegex)];
-
-                // If bold sections exist, use them for structured rendering
                 if (matches.length > 0) {
                   const introText = description.slice(0, matches[0].index).trim();
-
                   const sections = matches.map((match, idx) => {
                     const title = match[1].trim();
                     const start = match.index! + match[0].length;
@@ -432,33 +428,31 @@ const ResultPage = () => {
                     const detail = description.slice(start, end).trim();
                     return { title, detail };
                   });
-
                   return (
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                       {/* Intro */}
                       {introText && (
-                        <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300">
+                        <p className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-6 leading-relaxed">
                           {introText}
                         </p>
                       )}
-
                       {/* Sectioned content */}
-                      <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {sections.map((sec, i) => {
                           const points = sec.detail
                             .split(/(?<=[.!?])\s+/)
                             .map(p => p.trim())
                             .filter(Boolean);
                           return (
-                            <div key={i} className="bg-white/50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-100 dark:border-slate-700">
-                              <h4 className="text-lg font-semibold text-orange-600 dark:text-orange-400 mb-3 pb-2 border-b border-orange-100 dark:border-slate-700">
+                            <div key={i} className="bg-white/80 dark:bg-slate-800/80 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md flex flex-col min-h-[160px]">
+                              <h4 className="text-xl font-bold text-orange-600 dark:text-orange-400 mb-4 pb-2 border-b border-orange-100 dark:border-slate-700">
                                 {sec.title}
                               </h4>
                               <ul className="space-y-3 pl-1">
                                 {points.map((pt, idx) => (
                                   <li key={idx} className="flex items-start">
-                                    <span className="flex-shrink-0 w-1.5 h-1.5 mt-2.5 mr-2 rounded-full bg-orange-400"></span>
-                                    <span className="text-slate-700 dark:text-slate-300">{pt}</span>
+                                    <span className="flex-shrink-0 w-2 h-2 mt-2.5 mr-3 rounded-full bg-orange-400"></span>
+                                    <span className="text-base text-slate-700 dark:text-slate-200 leading-relaxed">{pt}</span>
                                   </li>
                                 ))}
                               </ul>
@@ -469,12 +463,10 @@ const ResultPage = () => {
                     </div>
                   );
                 }
-
                 // Fallback: previous keyword grouping if no bold markers present
                 const sentences = description.split(/(?<=[.!?])\s+/);
                 const intro = sentences[0];
                 const rest = sentences.slice(1).filter(Boolean);
-
                 const points = rest.map((sentence, idx) => ({
                   text: sentence,
                   title: [
@@ -489,21 +481,20 @@ const ResultPage = () => {
                     { key: 'space', label: 'Space' },
                   ].find(({ key }) => sentence.toLowerCase().includes(key))?.label || ''
                 }));
-
                 return (
-                  <div className="space-y-6">
-                    <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-300">
+                  <div className="space-y-8">
+                    <p className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-6 leading-relaxed">
                       {intro}
                     </p>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {points.map((point, idx) => (
-                        <div key={idx} className="bg-white/50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <div key={idx} className="bg-white/80 dark:bg-slate-800/80 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md flex flex-col min-h-[120px]">
                           {point.title && (
-                            <h4 className="font-medium text-slate-900 dark:text-white mb-2">
+                            <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
                               {point.title}
                             </h4>
                           )}
-                          <p className="text-slate-600 dark:text-slate-400">
+                          <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed">
                             {point.text}
                           </p>
                         </div>
