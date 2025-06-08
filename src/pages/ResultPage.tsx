@@ -415,14 +415,63 @@ const ResultPage = () => {
             </h3>
             <div className="prose prose-slate dark:prose-invert max-w-none">
               {(() => {
-                // Split description into sentences
-                const sentences = moodBoard.description.split(/(?<=[.!?])\s+/);
-                // Use the first sentence as the intro
+                const description = moodBoard.description;
+
+                // Detect sections marked with **Title:** style
+                const sectionRegex = /\*\*(.+?)\*\*:?/g;
+                const matches = [...description.matchAll(sectionRegex)];
+
+                // If bold sections exist, use them for structured rendering
+                if (matches.length > 0) {
+                  const introText = description.slice(0, matches[0].index).trim();
+
+                  const sections = matches.map((match, idx) => {
+                    const title = match[1].trim();
+                    const start = match.index! + match[0].length;
+                    const end = idx < matches.length - 1 ? matches[idx + 1].index! : description.length;
+                    const detail = description.slice(start, end).trim();
+                    return { title, detail };
+                  });
+
+                  return (
+                    <>
+                      {/* Intro */}
+                      {introText && (
+                        <p className="text-lg font-semibold text-slate-800 dark:text-white mb-4">
+                          {introText}
+                        </p>
+                      )}
+
+                      {/* Sectioned content */}
+                      {sections.map((sec, i) => {
+                        const points = sec.detail
+                          .split(/(?<=[.!?])\s+/)
+                          .map(p => p.trim())
+                          .filter(Boolean);
+                        return (
+                          <div key={i} className="mb-4">
+                            <h4 className="text-base lg:text-lg font-bold text-orange-600 dark:text-orange-400 mb-1">
+                              {sec.title}
+                            </h4>
+                            <ul className="list-disc pl-6 space-y-1">
+                              {points.map((pt, idx) => (
+                                <li key={idx} className="text-base text-slate-700 dark:text-slate-200">
+                                  {pt}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })}
+                    </>
+                  );
+                }
+
+                // Fallback: previous keyword grouping if no bold markers present
+                const sentences = description.split(/(?<=[.!?])\s+/);
                 const intro = sentences[0];
-                // The rest as bullet points (grouped if possible)
                 const rest = sentences.slice(1).filter(Boolean);
 
-                // Try to group by keywords for headers
                 const keywords = [
                   { key: 'furniture', label: 'Furniture' },
                   { key: 'color', label: 'Color Palette' },
@@ -435,8 +484,7 @@ const ResultPage = () => {
                   { key: 'space', label: 'Space' },
                 ];
 
-                // Group sentences by keyword
-                const points = [];
+                const points: { title: string; detail: string }[] = [];
                 const used = new Set();
                 for (const { key, label } of keywords) {
                   const found = rest.find(s => s.toLowerCase().includes(key));
@@ -445,27 +493,22 @@ const ResultPage = () => {
                     used.add(found);
                   }
                 }
-                // Add any remaining sentences as generic points
                 rest.forEach(s => {
-                  if (!used.has(s)) {
-                    points.push({ title: '', detail: s });
-                  }
+                  if (!used.has(s)) points.push({ title: '', detail: s });
                 });
 
                 return (
                   <>
-                    {/* Intro */}
                     <p className="text-lg font-semibold text-slate-800 dark:text-white mb-4">
                       {intro}
                     </p>
-                    {/* Bullet points */}
                     <ul className="list-disc pl-6 space-y-2">
-                      {points.map((point, idx) => (
+                      {points.map((p, idx) => (
                         <li key={idx} className="text-base text-slate-700 dark:text-slate-200">
-                          {point.title && (
-                            <span className="font-bold text-slate-900 dark:text-white mr-1">{point.title}:</span>
+                          {p.title && (
+                            <span className="font-bold text-slate-900 dark:text-white mr-1">{p.title}:</span>
                           )}
-                          <span>{point.detail.trim()}</span>
+                          {p.detail.trim()}
                         </li>
                       ))}
                     </ul>
