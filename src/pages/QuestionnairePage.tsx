@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { ArrowRight, ArrowLeft, Home, Sparkles } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface FormData {
   roomType: string;
@@ -18,6 +20,8 @@ interface FormData {
 
 const QuestionnairePage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     roomType: '',
@@ -25,6 +29,18 @@ const QuestionnairePage = () => {
     colorPalette: [],
     budget: ''
   });
+
+  // Redirect unauthenticated users to home and prompt sign up
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast({
+        title: 'Sign Up Required',
+        description: 'Please sign up or log in to create a mood board.',
+        variant: 'destructive'
+      });
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;

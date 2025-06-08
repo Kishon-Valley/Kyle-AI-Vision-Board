@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Download, Share, Heart, ArrowLeft, Sparkles, RefreshCw } from 'lucide-react';
 import { saveMoodBoard, MoodBoard as MoodBoardType } from '../lib/moodboards';
+import { supabase } from '../lib/supabase';
 import { generateDesignDescription, generateImagePrompt, generateMoodBoardImage } from '../lib/openai';
 import { getColorValue, getTextColor } from '@/lib/colors';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
@@ -282,6 +283,31 @@ const ResultPage = () => {
 
     if (!moodBoard) return;
     
+    // Check if this mood board is already saved for the user
+    try {
+      const { data: existing, error: dupError } = await supabase
+        .from('mood_boards')
+        .select('id')
+        .eq('image_url', moodBoard.image_url)
+        .limit(1)
+        .single();
+
+      if (dupError && dupError.code !== 'PGRST116') {
+        // Unknown error, log but continue to attempt save
+        console.error('Duplicate check failed:', dupError);
+      }
+
+      if (existing) {
+        toast({
+          title: 'Already Saved',
+          description: 'This mood board is already in your history.',
+        });
+        return;
+      }
+    } catch (err) {
+      console.error('Error during duplicate check:', err);
+    }
+
     try {
       // Save to Supabase
       const savingToast = toast({
@@ -298,10 +324,13 @@ const ResultPage = () => {
         budget: moodBoard.budget
       });
       
-      // Also save to localStorage as a backup
-      const savedMoodBoards = JSON.parse(localStorage.getItem('moodboards') || '[]');
-      savedMoodBoards.push(moodBoard);
-      localStorage.setItem('moodboards', JSON.stringify(savedMoodBoards));
+      // Also save to localStorage as a backup (avoid duplicates)
+      const savedMoodBoards: any[] = JSON.parse(localStorage.getItem('moodboards') || '[]');
+      const alreadyLocal = savedMoodBoards.some((b) => b.image_url === moodBoard.image_url);
+      if (!alreadyLocal) {
+        savedMoodBoards.push(moodBoard);
+        localStorage.setItem('moodboards', JSON.stringify(savedMoodBoards));
+      }
       
       setIsSaved(true);
       toast({
