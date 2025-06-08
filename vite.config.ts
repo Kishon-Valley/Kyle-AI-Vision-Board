@@ -36,10 +36,4 @@ export default defineConfig(({ mode }) => ({
     assetsInlineLimit: 4096,
     chunkSizeWarningLimit: 1000,
   },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
-  },
-  server: {
-    historyApiFallback: true,
-  },
 }));

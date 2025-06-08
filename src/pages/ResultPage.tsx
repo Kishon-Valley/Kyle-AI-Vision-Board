@@ -411,9 +411,30 @@ const ResultPage = () => {
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
               Design Description
             </h3>
-            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-              {moodBoard.description}
-            </p>
+            <div className="text-slate-600 dark:text-slate-300 leading-relaxed space-y-4">
+              <p className="font-medium">
+                Key Features of your {moodBoard.style} {moodBoard.room_type}:
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                {moodBoard.description.split('. ').filter(Boolean).map((sentence, index) => (
+                  <li key={index}>{sentence.replace(/^\./, '').trim()}</li>
+                ))}
+              </ul>
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                <p className="font-medium">Color Palette:</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {moodBoard.color_palette?.map((color, index) => (
+                    <span 
+                      key={index}
+                      className="px-3 py-1 rounded-full text-xs font-medium"
+                      style={{ backgroundColor: getColorValue(color), color: getTextColor(color) }}
+                    >
+                      {color}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -444,5 +465,3 @@ const ResultPage = () => {
 };
 
 export default ResultPage;
-
-
