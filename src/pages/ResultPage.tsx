@@ -409,15 +409,45 @@ const ResultPage = () => {
         {/* Design Description */}
         {moodBoard.description && (
           <div className="mt-8 bg-white/80 dark:bg-slate-800/80 p-6 rounded-lg shadow-sm backdrop-blur-sm">
-            <h3 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">
+            <h3 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white flex items-center">
+              <Sparkles className="w-6 h-6 text-orange-500 mr-2" />
               Your Design Story
             </h3>
             <div className="prose prose-slate dark:prose-invert max-w-none">
-              {moodBoard.description.split('\n').map((paragraph, i) => (
-                <p key={i} className="mb-4 last:mb-0">
-                  {paragraph}
-                </p>
-              ))}
+              {moodBoard.description.split('\n').map((paragraph, i) => {
+                // Check if the paragraph contains key design elements
+                const isKeyElement = paragraph.toLowerCase().includes('furniture') || 
+                                   paragraph.toLowerCase().includes('color') ||
+                                   paragraph.toLowerCase().includes('lighting') ||
+                                   paragraph.toLowerCase().includes('material') ||
+                                   paragraph.toLowerCase().includes('texture') ||
+                                   paragraph.toLowerCase().includes('decor');
+
+                if (isKeyElement) {
+                  // Format as a bullet point with a larger font for the key element
+                  const [keyElement, ...rest] = paragraph.split(':');
+                  return (
+                    <div key={i} className="mb-4 last:mb-0 flex items-start">
+                      <span className="text-orange-500 mr-2">•</span>
+                      <div>
+                        <span className="font-semibold text-lg text-slate-800 dark:text-white">
+                          {keyElement}:
+                        </span>
+                        <span className="text-slate-600 dark:text-slate-300">
+                          {rest.join(':')}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  // Regular paragraph with slightly larger font
+                  return (
+                    <p key={i} className="mb-4 last:mb-0 text-lg text-slate-600 dark:text-slate-300">
+                      {paragraph}
+                    </p>
+                  );
+                }
+              })}
             </div>
           </div>
         )}
