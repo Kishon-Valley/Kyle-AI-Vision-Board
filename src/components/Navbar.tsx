@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '@/hooks/use-toast';
-import { Palette, User, LogOut, Calendar, Sun, Moon, Loader2, Menu, X } from 'lucide-react';
+import { User, LogOut, Calendar, Sun, Moon, Loader2, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
   const { user, login, signUpWithEmail, loginWithGoogle, logout, isAuthenticated, isLoading } = useAuth();
@@ -118,7 +118,7 @@ const Navbar = () => {
             to="/" 
             className="flex items-center space-x-2 text-white hover:text-orange-400 transition-colors"
           >
-            <Palette className="w-8 h-8 text-orange-500" />
+            <img src="/kyle%20logo.jpg" alt="Moodboard Generator Logo" className="h-8 w-8 rounded-full object-cover" />
             <span className="text-xl font-bold">Moodboard Generator</span>
           </Link>
 
