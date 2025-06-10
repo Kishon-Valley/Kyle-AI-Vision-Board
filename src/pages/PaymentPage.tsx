@@ -17,7 +17,7 @@ const PaymentPage = () => {
     {
       name: 'Monthly',
       id: 'month',
-      price: '$9.99',
+      price: '$0.80',
       description: 'Billed monthly',
       features: [
         'Unlimited mood boards',
@@ -29,11 +29,11 @@ const PaymentPage = () => {
     {
       name: 'Yearly',
       id: 'year',
-      price: '$99.99',
-      description: 'Billed annually (save 16%)',
+      price: '$7.00',
+      description: 'Billed annually (save 11%)',
       features: [
         'Everything in Monthly',
-        '2 months free',
+        '1 month free',
         'Exclusive templates',
         'Early access to new features'
       ]
