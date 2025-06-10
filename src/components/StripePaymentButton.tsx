@@ -40,7 +40,7 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
         return;
       }
 
-      const response = await fetch('/api/create-subscription', {
+      const response = await fetch('https://www.moodboardgenerator.com/api/create-subscription', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
