@@ -28,7 +28,7 @@ const CheckoutForm = () => {
         ? import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY 
         : import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY;
 
-      const response = await fetch('/create-subscription', {
+      const response = await fetch('/api/create-subscription', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
