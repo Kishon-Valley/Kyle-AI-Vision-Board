@@ -41,6 +41,7 @@ const App = () => (
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/share/:id" element={<SharePage />} />
                   <Route path="/pricing" element={<PaymentPage />} />
+                  <Route path="/pricing/*" element={<PaymentPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
