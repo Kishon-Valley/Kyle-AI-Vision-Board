@@ -9,6 +9,13 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   },
   preview: {
     port: 8080,
