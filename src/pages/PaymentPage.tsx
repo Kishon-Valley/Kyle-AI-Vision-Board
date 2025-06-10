@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import StripePaymentButton from '@/components/StripePaymentButton';
@@ -7,11 +7,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
 const PaymentPage = () => {
+  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+      toast.error('Stripe publishable key is not configured');
+      navigate('/');
+      return;
+    }
+    setStripePromise(loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY));
+  }, [navigate]);
 
   const pricingPlans = [
     {
@@ -104,16 +112,27 @@ const PaymentPage = () => {
         ))}
       </div>
 
-      <div className="max-w-2xl mx-auto mt-12 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-center">Complete Your Subscription</h2>
-        <div className="bg-slate-50 dark:bg-slate-700 p-6 rounded-lg">
-          <Elements stripe={stripePromise}>
-            <StripePaymentButton />
-          </Elements>
-        </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 text-center">
+      <div className="max-w-4xl mx-auto text-center mt-12">
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Complete Your Subscription</h2>
+        <p className="text-xl text-slate-600 dark:text-slate-300 mb-8">
+          {billingInterval === 'month' ? 'Pay $0.80/month' : 'Pay $7.00/year'}
+        </p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
           Your payment is secure and encrypted. We use Stripe for secure payment processing.
         </p>
+
+        <div className="max-w-lg mx-auto">
+          {stripePromise ? (
+            <Elements stripe={stripePromise}>
+              <StripePaymentButton billingInterval={billingInterval} />
+            </Elements>
+          ) : (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+              <p className="text-slate-500">Loading payment processing...</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

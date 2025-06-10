@@ -4,13 +4,17 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 type BillingInterval = 'month' | 'year';
 
-const CheckoutForm = () => {
-  const [billingInterval, setBillingInterval] = useState<BillingInterval>('month');
+interface StripePaymentButtonProps {
+  billingInterval: BillingInterval;
+}
+
+const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: initialBillingInterval }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>(initialBillingInterval);
   const stripe = useStripe();
   const elements = useElements();
 
@@ -18,6 +22,7 @@ const CheckoutForm = () => {
     event.preventDefault();
     
     if (!stripe || !elements) {
+      toast.error('Stripe is not loaded');
       return;
     }
 
@@ -27,6 +32,11 @@ const CheckoutForm = () => {
       const priceId = billingInterval === 'month' 
         ? import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY 
         : import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY;
+
+      if (!priceId) {
+        toast.error('Price ID is not configured');
+        return;
+      }
 
       const response = await fetch('/api/create-subscription', {
         method: 'POST',
@@ -39,7 +49,16 @@ const CheckoutForm = () => {
         }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create subscription');
+      }
+
       const { clientSecret } = await response.json();
+
+      if (!clientSecret) {
+        throw new Error('No client secret received');
+      }
 
       const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
@@ -49,13 +68,13 @@ const CheckoutForm = () => {
 
       if (error) {
         toast.error(error.message || 'Payment failed');
-      } else if (paymentIntent.status === 'succeeded') {
+      } else if (paymentIntent?.status === 'succeeded') {
         toast.success('Payment successful!');
         // Handle successful payment (e.g., redirect to success page)
       }
     } catch (error) {
       console.error('Error:', error);
-      toast.error('An error occurred during payment');
+      toast.error(error instanceof Error ? error.message : 'An error occurred during payment');
     } finally {
       setIsLoading(false);
     }
@@ -108,10 +127,10 @@ const CheckoutForm = () => {
   );
 };
 
-const StripePaymentButton = () => {
+const StripePaymentButton = ({ billingInterval }: StripePaymentButtonProps) => {
   return (
     <Elements stripe={stripePromise}>
-      <CheckoutForm />
+      <CheckoutForm billingInterval={billingInterval} />
     </Elements>
   );
 };
