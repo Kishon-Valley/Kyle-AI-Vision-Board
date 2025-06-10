@@ -140,19 +140,11 @@ const Navbar = () => {
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
             <NavLink to="/" label="Home" currentPath={location.pathname} />
-            <NavLink to="/questionnaire" label="Create" currentPath={location.pathname} />
+            <NavLink to="/questionnaire" label="Get Started" currentPath={location.pathname} />
             <NavLink to="/pricing" label="Pricing" currentPath={location.pathname} />
+            <NavLink to="/history" label="History" currentPath={location.pathname} />
             {isAuthenticated && (
-              <NavLink 
-                to="/history" 
-                label={
-                  <span className="flex items-center space-x-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>My Boards</span>
-                  </span>
-                } 
-                currentPath={location.pathname} 
-              />
+              <NavLink to="/profile" label="Profile" currentPath={location.pathname} />
             )}
           </div>
 
@@ -178,15 +170,16 @@ const Navbar = () => {
                   currentPath={location.pathname} 
                   onClick={() => setIsMobileMenuOpen(false)}
                 />
+                <MobileNavLink 
+                  to="/history" 
+                  label="History" 
+                  currentPath={location.pathname} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
                 {isAuthenticated && (
                   <MobileNavLink 
-                    to="/history" 
-                    label={
-                      <span className="flex items-center space-x-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>My Boards</span>
-                      </span>
-                    } 
+                    to="/profile" 
+                    label="Profile" 
                     currentPath={location.pathname} 
                     onClick={() => setIsMobileMenuOpen(false)}
                   />
