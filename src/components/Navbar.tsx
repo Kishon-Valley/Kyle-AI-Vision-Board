@@ -141,6 +141,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-8">
             <NavLink to="/" label="Home" currentPath={location.pathname} />
             <NavLink to="/questionnaire" label="Create" currentPath={location.pathname} />
+            <NavLink to="/pricing" label="Pricing" currentPath={location.pathname} />
             {isAuthenticated && (
               <NavLink 
                 to="/history" 
@@ -168,6 +169,12 @@ const Navbar = () => {
                 <MobileNavLink 
                   to="/questionnaire" 
                   label="Create" 
+                  currentPath={location.pathname} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+                <MobileNavLink 
+                  to="/pricing" 
+                  label="Pricing" 
                   currentPath={location.pathname} 
                   onClick={() => setIsMobileMenuOpen(false)}
                 />

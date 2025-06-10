@@ -16,6 +16,7 @@ import UserProfile from "./pages/UserProfile";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import SharePage from "./pages/SharePage";
+import PaymentPage from "./pages/PaymentPage";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
                   <Route path="/profile" element={<UserProfile />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/share/:id" element={<SharePage />} />
+                  <Route path="/pricing" element={<PaymentPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
