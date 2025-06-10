@@ -51,18 +51,23 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create subscription');
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (e) {
+        console.error('Failed to parse response:', e);
+        throw new Error('Invalid response from server');
       }
 
-      const { clientSecret } = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Failed to create subscription');
+      }
 
-      if (!clientSecret) {
+      if (!responseData.clientSecret) {
         throw new Error('No client secret received');
       }
 
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      const { error, paymentIntent } = await stripe.confirmCardPayment(responseData.clientSecret, {
         payment_method: {
           card: elements.getElement(CardElement)!,
         },

@@ -1,4 +1,6 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16' // Use the latest stable API version
+});
 
 module.exports = async (req, res) => {
   // Set CORS headers
@@ -22,11 +24,18 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // Validate request body
     if (!req.body || !req.body.priceId) {
       return res.status(400).json({ error: 'Missing required priceId parameter' });
     }
 
     const { priceId } = req.body;
+
+    // Validate Stripe secret key
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('Stripe secret key is not configured');
+      return res.status(500).json({ error: 'Payment service is not properly configured' });
+    }
 
     // Create a customer
     const customer = await stripe.customers.create({
@@ -46,14 +55,34 @@ module.exports = async (req, res) => {
       expand: ['latest_invoice.payment_intent'],
     });
 
+    // Validate the subscription response
+    if (!subscription.latest_invoice?.payment_intent?.client_secret) {
+      console.error('No client secret in subscription response:', subscription);
+      return res.status(500).json({ error: 'Failed to create payment intent' });
+    }
+
     const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
 
-    res.status(200).json({
+    return res.status(200).json({
       clientSecret,
       subscriptionId: subscription.id,
     });
   } catch (error) {
     console.error('Error creating subscription:', error);
-    res.status(500).json({ error: error.message || 'Failed to create subscription' });
+    
+    // Handle specific Stripe errors
+    if (error.type === 'StripeCardError') {
+      return res.status(400).json({ error: error.message });
+    } else if (error.type === 'StripeInvalidRequestError') {
+      return res.status(400).json({ error: 'Invalid request to payment service' });
+    } else if (error.type === 'StripeAPIError') {
+      return res.status(500).json({ error: 'Payment service error' });
+    }
+
+    // Generic error response
+    return res.status(500).json({ 
+      error: 'An error occurred while processing your payment',
+      details: error.message
+    });
   }
 }; 
