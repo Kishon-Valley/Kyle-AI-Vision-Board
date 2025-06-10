@@ -2,7 +2,8 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2023-10-16' // Use the latest stable API version
 });
 
-module.exports = async (req, res) => {
+// Vercel serverless function handler
+export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -85,4 +86,4 @@ module.exports = async (req, res) => {
       details: error.message
     });
   }
-}; 
+} 
