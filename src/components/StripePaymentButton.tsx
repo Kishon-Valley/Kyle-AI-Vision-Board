@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Make sure to use the correct environment variable name for Vite
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 type BillingInterval = 'month' | 'year';
 
@@ -15,6 +16,7 @@ interface StripePaymentButtonProps {
 const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: initialBillingInterval }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(initialBillingInterval);
+ 
   const stripe = useStripe();
   const elements = useElements();
 
@@ -100,20 +102,22 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
       </div>
 
       <div className="border rounded-lg p-4">
-        <CardElement options={{
-          style: {
-            base: {
-              fontSize: '16px',
-              color: '#424770',
-              '::placeholder': {
-                color: '#aab7c4',
+        <CardElement 
+          options={{
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': {
+                  color: '#aab7c4',
+                },
+              },
+              invalid: {
+                color: '#9e2146',
               },
             },
-            invalid: {
-              color: '#9e2146',
-            },
-          },
-        }} />
+          }} 
+        />
       </div>
 
       <Button 
