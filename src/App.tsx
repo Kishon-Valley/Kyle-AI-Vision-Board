@@ -24,10 +24,9 @@ const queryClient = new QueryClient();
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { hasSubscription, checkSubscription } = useSubscription();
+  const { hasSubscription } = useSubscription();
   
   if (!hasSubscription) {
-    checkSubscription();
     return <Navigate to="/pricing" replace />;
   }
   
