@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 
 const PaymentSuccessPage = () => {
-  const navigate = useNavigate();
   const { hasSubscription, isLoading, checkSubscription } = useSubscription();
   const [isSettingSubscription, setIsSettingSubscription] = useState(false);
 
@@ -30,7 +29,7 @@ const PaymentSuccessPage = () => {
       
       // Double check subscription before navigating
       if (checkSubscription()) {
-        navigate('/questionnaire');
+        window.location.href = '/questionnaire';
       }
     } finally {
       setIsSettingSubscription(false);
@@ -39,8 +38,7 @@ const PaymentSuccessPage = () => {
 
   // Redirect unauthenticated or unsubscribed users back to pricing when not loading
   if (!isLoading && !hasSubscription) {
-    navigate('/pricing');
-    return null;
+    return <Navigate to="/pricing" replace />;
   }
 
   // Show loader while subscription check in progress
