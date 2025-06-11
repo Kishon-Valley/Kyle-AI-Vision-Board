@@ -273,46 +273,84 @@ const UserProfile = () => {
     }
 
     setIsDeleting(true);
+    let errorMessage = 'Failed to delete account. Please try again or contact support.';
     
     try {
-      // Cancel any active subscription first
+      // Step 1: Cancel any active subscription first
       if (accountType === 'premium') {
-        const { error: subError } = await supabase.functions.invoke('cancel-subscription');
-        if (subError) throw subError;
-      }
-      
-      // Delete user data from storage (if any)
-      if (avatarUrl) {
-        const avatarPath = avatarUrl.split('/').pop();
-        if (avatarPath) {
-          await supabase.storage.from('profile-images').remove([avatarPath]);
+        try {
+          const { error: subError } = await supabase.functions.invoke('cancel-subscription');
+          if (subError) {
+            console.error('Subscription cancellation error:', subError);
+            throw new Error(`Failed to cancel subscription: ${subError.message}`);
+          }
+        } catch (subError) {
+          console.error('Error in subscription cancellation:', subError);
+          throw new Error(`Subscription cancellation failed: ${subError instanceof Error ? subError.message : 'Unknown error'}`);
         }
       }
       
-      // Delete user data from database
-      await supabase.from('profiles').delete().eq('id', user.id);
+      // Step 2: Delete user data from storage (if any)
+      if (avatarUrl) {
+        try {
+          const avatarPath = avatarUrl.split('/').pop();
+          if (avatarPath) {
+            const { error: storageError } = await supabase.storage
+              .from('profile-images')
+              .remove([avatarPath]);
+            
+            if (storageError) {
+              console.warn('Failed to delete profile image:', storageError);
+              // Continue with account deletion even if image deletion fails
+            }
+          }
+        } catch (storageError) {
+          console.warn('Error deleting profile image:', storageError);
+          // Continue with account deletion even if image deletion fails
+        }
+      }
       
-      // Delete auth user (this will sign them out)
+      // Step 3: Delete user data from database
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+      
+      if (profileError) {
+        console.error('Profile deletion error:', profileError);
+        throw new Error(`Failed to delete profile data: ${profileError.message}`);
+      }
+      
+      // Step 4: Delete auth user (this will sign them out)
       const { error: deleteError } = await supabase.rpc('delete_user');
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Auth user deletion error:', deleteError);
+        throw new Error(`Failed to delete authentication data: ${deleteError.message}`);
+      }
       
-      // Sign out
-      await supabase.auth.signOut();
-      
+      // If we reach here, all deletions were successful
       toast({
         title: 'Account Deleted',
         description: 'Your account and all associated data have been permanently deleted.',
       });
       
-      // Redirect to home page
+      // Sign out and redirect to home page
+      await supabase.auth.signOut();
       window.location.href = '/';
       
     } catch (error) {
       console.error('Error deleting account:', error);
+      
+      // More specific error messages based on the error type
+      if (error instanceof Error) {
+        errorMessage = error.message || errorMessage;
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to delete account. Please try again or contact support.',
+        description: errorMessage,
         variant: 'destructive',
+        duration: 10000, // Show for 10 seconds
       });
     } finally {
       setIsDeleting(false);
@@ -357,14 +395,19 @@ const UserProfile = () => {
             variant="destructive"
             onClick={handleDeleteAccount}
             disabled={isDeleting}
-            className="flex items-center justify-center"
+            className="flex items-center justify-center w-full"
           >
             {isDeleting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Deleting...
+              </>
             ) : (
-              <Trash2 className="h-4 w-4 mr-2" />
+              <>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete My Account
+              </>
             )}
-            {isDeleting ? 'Deleting...' : 'Delete Account'}
           </Button>
         </div>
       </div>
