@@ -55,7 +55,7 @@ const Footer = () => {
                 href="https://lmtsoftware-portfolio.vercel.app/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent hover:underline underline-offset-4 decoration-2 transition-all duration-300 hover:from-orange-400 hover:to-pink-400"
+                className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hover:underline underline-offset-4 decoration-2 transition-all duration-300 hover:from-blue-300 hover:to-cyan-300 font-semibold"
               >
                 SofiTechAiSolutions
               </a>
