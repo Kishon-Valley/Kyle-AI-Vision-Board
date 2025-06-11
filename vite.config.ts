@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => ({
   base: '/',
   server: {
     host: "::",
-    port: 8080,
+    port: 3001,
     strictPort: true,
     proxy: {
       '/api': {
@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     }
   },
   preview: {
-    port: 8080,
+    port: 3001,
     strictPort: true,
   },
   plugins: [
