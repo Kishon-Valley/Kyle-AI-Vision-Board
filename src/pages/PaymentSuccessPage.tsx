@@ -13,6 +13,8 @@ const PaymentSuccessPage = () => {
   }, []);
 
   const handleStartCreating = () => {
+    // Ensure subscription status is properly set
+    localStorage.setItem('hasActiveSubscription', 'true');
     navigate('/questionnaire');
   };
 
