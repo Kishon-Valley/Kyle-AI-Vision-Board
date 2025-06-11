@@ -52,17 +52,12 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
         }),
       });
 
-      let responseData;
-      try {
-        responseData = await response.json();
-      } catch (e) {
-        console.error('Failed to parse response:', e);
-        throw new Error('Invalid response from server');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to create subscription');
-      }
+      const responseData = await response.json();
 
       if (!responseData.clientSecret) {
         throw new Error('No client secret received');
@@ -71,7 +66,7 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
       const { error, paymentIntent } = await stripe.confirmCardPayment(responseData.clientSecret, {
         payment_method: {
           card: elements.getElement(CardElement)!,
-        },
+        }
       });
 
       if (error) {

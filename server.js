@@ -14,7 +14,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Create subscription endpoint
-app.post('/create-subscription', async (req, res) => {
+app.post('/api/create-subscription', async (req, res) => {
   try {
     if (!req.body || !req.body.priceId) {
       return res.status(400).json({ error: 'Missing required priceId parameter' });
