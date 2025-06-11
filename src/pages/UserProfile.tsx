@@ -696,7 +696,7 @@ const UserProfile = () => {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-slate-600 dark:text-red-300/90 mb-4">
-            This action cannot be undone. All your data, including mood boards and preferences, will be permanently removed.
+            This action cannot be undone. All your data, including mood boards, payment records, and preferences, will be permanently removed.
             {accountType === 'premium' && (
               <span className="block mt-2 font-medium text-red-600 dark:text-red-400">
                 Note: This will cancel your active subscription. No refunds will be issued.
