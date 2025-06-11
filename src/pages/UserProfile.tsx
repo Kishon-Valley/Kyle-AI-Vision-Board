@@ -15,6 +15,7 @@ const UserProfile = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [accountType, setAccountType] = useState<'free' | 'premium'>('free');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -77,6 +78,16 @@ const UserProfile = () => {
     const fetchUserMetadata = async () => {
       if (user) {
         try {
+          // Check subscription status
+          const { data: subscriptionData } = await supabase
+            .from('subscriptions')
+            .select('status')
+            .eq('user_id', user.id)
+            .in('status', ['active', 'trialing'])
+            .single();
+            
+          setAccountType(subscriptionData ? 'premium' : 'free');
+          
           const { data, error } = await supabase
             .from('profiles')
             .select('bio, favorite_style, avatar_url')
@@ -283,8 +294,30 @@ const UserProfile = () => {
             <div className="lg:col-span-1">
               <Card className="backdrop-blur-md bg-white/30 dark:bg-slate-900/50 border-white/20 dark:border-slate-700/50 shadow-2xl animate-scale-in">
                 <CardContent className="p-8 text-center">
+                  {/* Account Type Badge */}
+                  <div className="mb-2 text-center">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      accountType === 'premium' 
+                        ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' 
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                    }`}>
+                      {accountType === 'premium' ? (
+                        <>
+                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          Premium Member
+                        </>
+                      ) : 'Free Account'}
+                    </span>
+                  </div>
+                  
                   <div className="relative mb-6">
-                    <div className="w-32 h-32 mx-auto bg-gradient-to-r from-orange-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                    <div className={`w-32 h-32 mx-auto ${
+                      accountType === 'premium' 
+                        ? 'bg-gradient-to-r from-yellow-400 to-orange-500' 
+                        : 'bg-gradient-to-r from-gray-400 to-gray-600'
+                    } rounded-full flex items-center justify-center shadow-lg overflow-hidden`}>
                       {avatarUrl ? (
                         <img 
                           src={avatarUrl} 
