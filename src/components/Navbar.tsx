@@ -179,9 +179,11 @@ const Navbar = () => {
             <NavLink to="/" label="Home" currentPath={location.pathname} />
             <NavLink to="#" label="Get Started" currentPath={location.pathname} onClick={handleGetStarted} />
             <NavLink to="/pricing" label="Pricing" currentPath={location.pathname} />
-            <NavLink to="/history" label="History" currentPath={location.pathname} />
             {isAuthenticated && (
-              <NavLink to="/profile" label="Profile" currentPath={location.pathname} />
+              <>
+                <NavLink to="/history" label="History" currentPath={location.pathname} />
+                <NavLink to="/profile" label="Profile" currentPath={location.pathname} />
+              </>
             )}
           </div>
 
@@ -210,19 +212,21 @@ const Navbar = () => {
                   currentPath={location.pathname} 
                   onClick={() => setIsMobileMenuOpen(false)}
                 />
-                <MobileNavLink 
-                  to="/history" 
-                  label="History" 
-                  currentPath={location.pathname} 
-                  onClick={() => setIsMobileMenuOpen(false)}
-                />
                 {isAuthenticated && (
-                  <MobileNavLink 
-                    to="/profile" 
-                    label="Profile" 
-                    currentPath={location.pathname} 
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  />
+                  <>
+                    <MobileNavLink 
+                      to="/history" 
+                      label="History" 
+                      currentPath={location.pathname} 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    />
+                    <MobileNavLink 
+                      to="/profile" 
+                      label="Profile" 
+                      currentPath={location.pathname} 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    />
+                  </>
                 )}
               </div>
             </div>
