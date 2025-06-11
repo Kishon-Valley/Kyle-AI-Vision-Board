@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getUserMoodBoards } from '../lib/moodboards';
@@ -14,6 +14,7 @@ import { User, Mail, Palette, Camera, Sparkles, Loader2, X, AlertTriangle, Trash
 const UserProfile = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [accountType, setAccountType] = useState<'free' | 'premium'>('free');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -359,8 +360,8 @@ const UserProfile = () => {
         description: 'Your account and all associated data have been permanently deleted.',
       });
       
-      // Redirect to home page
-      window.location.href = '/';
+          // Use navigate for proper cleanup
+      navigate('/', { replace: true });
       
     } catch (error) {
       console.error('Error deleting account:', error);
