@@ -7,7 +7,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 
 const PaymentSuccessPage = () => {
   const navigate = useNavigate();
-  const { hasSubscription, checkSubscription } = useSubscription();
+  const { hasSubscription, isLoading, checkSubscription } = useSubscription();
   const [isSettingSubscription, setIsSettingSubscription] = useState(false);
 
   useEffect(() => {
@@ -36,6 +36,24 @@ const PaymentSuccessPage = () => {
       setIsSettingSubscription(false);
     }
   };
+
+  // Redirect unauthenticated or unsubscribed users back to pricing when not loading
+  if (!isLoading && !hasSubscription) {
+    navigate('/pricing');
+    return null;
+  }
+
+  // Show loader while subscription check in progress
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <CheckCircle2 className="h-10 w-10 animate-spin text-green-500" />
+          <p className="text-gray-600">Verifying subscription...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-12">
