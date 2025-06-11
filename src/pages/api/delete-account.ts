@@ -42,14 +42,7 @@ export default async function handler(
       });
     }
 
-    // Clear any local storage items
-    res.setHeader('Clear-Site-Data', '"cache", "cookies", "localStorage", "sessionStorage"');
-    
-    return res.status(200).json({ 
-      success: true,
-      message: 'Account deleted successfully',
-      redirect: '/'
-    });
+    return res.status(200).json({ success: true });
     
   } catch (error) {
     console.error('Error in delete-account API:', error);

@@ -182,7 +182,7 @@ const Navbar = () => {
             {isAuthenticated && (
               <>
                 <NavLink to="/history" label="History" currentPath={location.pathname} />
-                <NavLink to="/profile" label="Profile" currentPath={location.pathname} />
+              <NavLink to="/profile" label="Profile" currentPath={location.pathname} />
               </>
             )}
           </div>
@@ -214,18 +214,18 @@ const Navbar = () => {
                 />
                 {isAuthenticated && (
                   <>
-                    <MobileNavLink 
-                      to="/history" 
-                      label="History" 
-                      currentPath={location.pathname} 
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    />
-                    <MobileNavLink 
-                      to="/profile" 
-                      label="Profile" 
-                      currentPath={location.pathname} 
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    />
+                <MobileNavLink 
+                  to="/history" 
+                  label="History" 
+                  currentPath={location.pathname} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+                  <MobileNavLink 
+                    to="/profile" 
+                    label="Profile" 
+                    currentPath={location.pathname} 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  />
                   </>
                 )}
               </div>
@@ -344,7 +344,7 @@ const Navbar = () => {
                         Google
                       </Button>
                     </TabsContent>
-
+                    
                     <TabsContent value="signup" className="mt-4">
                       <form onSubmit={handleSignUp} className="space-y-4">
                         <div className="space-y-2">

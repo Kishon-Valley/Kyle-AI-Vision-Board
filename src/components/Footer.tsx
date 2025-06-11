@@ -49,8 +49,16 @@ const Footer = () => {
 
           {/* Attribution and Copyright */}
           <div className="space-y-1 pt-4 border-t border-slate-700/50 dark:border-slate-800/50">
-            <p className="text-sm font-medium bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-              Built by SofiTchAiSolutions
+            <p className="text-sm font-medium">
+              Built by{' '}
+              <a 
+                href="https://lmtsoftware-portfolio.vercel.app/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent hover:underline underline-offset-4 decoration-2 transition-all duration-300 hover:from-orange-400 hover:to-pink-400"
+              >
+                SofiTechAiSolutions
+              </a>
             </p>
             <p className="text-xs text-slate-500">
               {new Date().getFullYear()} Moodboard Generator. All rights reserved.
