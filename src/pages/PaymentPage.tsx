@@ -29,7 +29,8 @@ const PaymentPage = () => {
     );
   }
 
-  if (hasSubscription) {
+  // Only show subscription success message if user is authenticated and has an active subscription
+  if (isAuthenticated && hasSubscription) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <Card className="max-w-2xl mx-auto">
@@ -71,7 +72,10 @@ const PaymentPage = () => {
             </ul>
           </CardContent>
           <CardFooter className="flex justify-center">
-            <Button onClick={() => navigate('/questionnaire')} className="bg-orange-500 hover:bg-orange-600">
+            <Button 
+              onClick={() => navigate('/questionnaire')} 
+              className="bg-orange-500 hover:bg-orange-600"
+            >
               Start Creating
             </Button>
           </CardFooter>
