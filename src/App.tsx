@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Navbar from "./components/Navbar";
@@ -17,8 +17,22 @@ import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 import SharePage from "./pages/SharePage";
 import PaymentPage from "./pages/PaymentPage";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage";
+import { useSubscription } from "./hooks/useSubscription";
 
 const queryClient = new QueryClient();
+
+// Protected Route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { hasSubscription, checkSubscription } = useSubscription();
+  
+  if (!hasSubscription) {
+    checkSubscription();
+    return <Navigate to="/pricing" replace />;
+  }
+  
+  return <>{children}</>;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -33,15 +47,23 @@ const App = () => (
               <main className="flex-1">
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
-                  <Route path="/questionnaire" element={<QuestionnairePage />} />
+                  <Route path="/questionnaire" element={
+                    <ProtectedRoute>
+                      <QuestionnairePage />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/loading" element={<LoadingPage />} />
                   <Route path="/result" element={<ResultPage />} />
-                  <Route path="/history" element={<HistoryPage />} />
+                  <Route path="/history" element={
+                    <ProtectedRoute>
+                      <HistoryPage />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/profile" element={<UserProfile />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/share/:id" element={<SharePage />} />
                   <Route path="/pricing" element={<PaymentPage />} />
-                  <Route path="/pricing/*" element={<PaymentPage />} />
+                  <Route path="/payment-success" element={<PaymentSuccessPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

@@ -1,6 +1,7 @@
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ interface StripePaymentButtonProps {
 const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: initialBillingInterval }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(initialBillingInterval);
+  const navigate = useNavigate();
  
   const stripe = useStripe();
   const elements = useElements();
@@ -72,8 +74,10 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
       if (error) {
         toast.error(error.message || 'Payment failed');
       } else if (paymentIntent?.status === 'succeeded') {
-        toast.success('Payment successful!');
-        // Handle successful payment (e.g., redirect to success page)
+        // Set subscription status in localStorage
+        localStorage.setItem('hasActiveSubscription', 'true');
+        // Redirect to success page
+        navigate('/payment-success');
       }
     } catch (error) {
       console.error('Error:', error);
