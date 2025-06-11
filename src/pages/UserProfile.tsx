@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Palette, Camera, Sparkles, Loader2, X } from 'lucide-react';
+import { User, Mail, Palette, Camera, Sparkles, Loader2, X, AlertTriangle, Trash2 } from 'lucide-react';
 
 const UserProfile = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -25,6 +25,8 @@ const UserProfile = () => {
   });
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Stats for Design Journey section
@@ -264,6 +266,102 @@ const UserProfile = () => {
       setIsUploading(false);
     }
   };
+
+  const handleDeleteAccount = async () => {
+    if (!user || !window.confirm('Are you absolutely sure? This will permanently delete your account and all associated data. This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    
+    try {
+      // Cancel any active subscription first
+      if (accountType === 'premium') {
+        const { error: subError } = await supabase.functions.invoke('cancel-subscription');
+        if (subError) throw subError;
+      }
+      
+      // Delete user data from storage (if any)
+      if (avatarUrl) {
+        const avatarPath = avatarUrl.split('/').pop();
+        if (avatarPath) {
+          await supabase.storage.from('profile-images').remove([avatarPath]);
+        }
+      }
+      
+      // Delete user data from database
+      await supabase.from('profiles').delete().eq('id', user.id);
+      
+      // Delete auth user (this will sign them out)
+      const { error: deleteError } = await supabase.rpc('delete_user');
+      if (deleteError) throw deleteError;
+      
+      // Sign out
+      await supabase.auth.signOut();
+      
+      toast({
+        title: 'Account Deleted',
+        description: 'Your account and all associated data have been permanently deleted.',
+      });
+      
+      // Redirect to home page
+      window.location.href = '/';
+      
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete account. Please try again or contact support.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const DeleteAccountConfirmation = () => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full animate-scale-in">
+        <div className="flex items-center justify-center mb-4">
+          <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
+            <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+          </div>
+        </div>
+        <h3 className="text-lg font-semibold text-center mb-2">Delete Your Account</h3>
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 text-center">
+          This action is permanent and cannot be undone. All your data will be deleted immediately.
+          {accountType === 'premium' && (
+            <span className="block mt-2 font-medium text-red-600 dark:text-red-400">
+              Note: Deleting your account will cancel any active subscription, but no refunds will be issued.
+            </span>
+          )}
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteConfirm(false)}
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteAccount}
+            disabled={isDeleting}
+            className="flex items-center justify-center"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            {isDeleting ? 'Deleting...' : 'Delete Account'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -520,6 +618,39 @@ const UserProfile = () => {
           </div>
         </div>
       </div>
+      
+      {/* Delete Account Section */}
+      <Card className="mt-8 border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-900/10 backdrop-blur-md">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-red-600 dark:text-red-400">
+            Delete Account
+          </CardTitle>
+          <p className="text-sm text-red-600/80 dark:text-red-400/80">
+            Permanently delete your account and all associated data
+          </p>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+            This action cannot be undone. All your data, including mood boards and preferences, will be permanently removed.
+            {accountType === 'premium' && (
+              <span className="block mt-2 font-medium text-red-600 dark:text-red-400">
+                Note: This will cancel your active subscription. No refunds will be issued.
+              </span>
+            )}
+          </p>
+          <Button
+            variant="destructive"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full sm:w-auto"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete My Account
+          </Button>
+        </CardContent>
+      </Card>
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && <DeleteAccountConfirmation />}
     </div>
   );
 };
