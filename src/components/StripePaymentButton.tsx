@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
+import { useAuth } from '../contexts/AuthContext';
 
 // Make sure to use the correct environment variable name for Vite
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -18,6 +19,7 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
   const [isLoading, setIsLoading] = useState(false);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(initialBillingInterval);
   const navigate = useNavigate();
+  const { user } = useAuth();
  
   const stripe = useStripe();
   const elements = useElements();
@@ -27,6 +29,12 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
     
     if (!stripe || !elements) {
       toast.error('Stripe is not loaded');
+      return;
+    }
+
+    if (!user) {
+      toast.error('You must be logged in to subscribe');
+      navigate('/');
       return;
     }
 
@@ -52,6 +60,7 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
         body: JSON.stringify({
           priceId,
           billingInterval,
+          userId: user.id
         }),
       });
 

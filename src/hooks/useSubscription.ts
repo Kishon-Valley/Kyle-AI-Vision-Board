@@ -28,8 +28,7 @@ export const useSubscription = () => {
         if (error && error.code !== 'PGRST116') {
           console.warn('Error checking subscription:', error);
         }
-        const localFlag = localStorage.getItem('hasActiveSubscription') === 'true';
-        setHasSubscription(!!data || localFlag);
+        setHasSubscription(!!data);
       } catch (error) {
         console.error('Error checking subscription:', error);
         setHasSubscription(false);
