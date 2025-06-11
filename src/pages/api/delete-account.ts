@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 // This is now a client-side function that calls your Express API
 export default async function deleteUserAccount(userId: string) {
   try {
-    const response = await fetch('http://localhost:3000/api/delete-account', {
+    const response = await fetch('/api/delete-account', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

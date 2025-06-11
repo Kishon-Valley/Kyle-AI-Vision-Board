@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -335,34 +334,24 @@ const UserProfile = () => {
           body: JSON.stringify({ userId: user.id })
         });
         
-        // Handle non-JSON responses (like HTML error pages)
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const text = await response.text();
-          console.error('Non-JSON response:', text);
-          throw new Error('Invalid response from server');
-        }
-        
-        const data = await response.json();
-        
         if (!response.ok) {
-          console.error('API error response:', data);
-          throw new Error(data.error || 'Failed to delete authentication data');
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(errorData.error || 'Failed to delete authentication data');
         }
+        
+        // If we reach here, all deletions were successful
+        toast({
+          title: 'Account Deleted',
+          description: 'Your account and all associated data have been permanently deleted.',
+        });
+        
+        // Use navigate for proper cleanup
+        navigate('/', { replace: true });
+        
       } catch (error) {
         console.error('Auth user deletion error:', error);
         throw new Error(`Failed to delete authentication data: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
-      
-      // If we reach here, all deletions were successful
-      toast({
-        title: 'Account Deleted',
-        description: 'Your account and all associated data have been permanently deleted.',
-      });
-      
-          // Use navigate for proper cleanup
-      navigate('/', { replace: true });
-      
     } catch (error) {
       console.error('Error deleting account:', error);
       

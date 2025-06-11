@@ -110,24 +110,34 @@ app.post('/api/delete-account', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Delete user data from profiles table
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (profileError) {
+      console.error('Error deleting profile data:', profileError);
+      // Continue even if profile deletion fails
+    }
+
+    // Delete user data from subscriptions table
+    const { error: subscriptionError } = await supabaseAdmin
+      .from('subscriptions')
+      .delete()
+      .eq('user_id', userId);
+
+    if (subscriptionError) {
+      console.error('Error deleting subscription data:', subscriptionError);
+      // Continue even if subscription deletion fails
+    }
+
     // Delete the user from auth
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     
     if (deleteError) {
       console.error('Error deleting user from auth:', deleteError);
       return res.status(500).json({ error: 'Failed to delete user from authentication' });
-    }
-
-    // Delete user data from your database tables
-    // Replace 'user_data' with your actual table names
-    const { error: dataError } = await supabaseAdmin
-      .from('user_data')
-      .delete()
-      .eq('user_id', userId);
-
-    if (dataError) {
-      console.error('Error deleting user data:', dataError);
-      // Continue even if data deletion fails, as auth is already deleted
     }
 
     res.status(200).json({ success: true, message: 'Account deleted successfully' });
