@@ -329,14 +329,22 @@ const UserProfile = () => {
           </div>
         </div>
         <h3 className="text-lg font-semibold text-center mb-2">Delete Your Account</h3>
-        <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 text-center">
-          This action is permanent and cannot be undone. All your data will be deleted immediately.
+        <div className="space-y-4 mb-6">
+          <p className="text-sm text-slate-700 dark:text-slate-200 text-center">
+            This action is permanent and cannot be undone.
+          </p>
+          <p className="text-sm text-slate-700 dark:text-slate-200 font-medium text-center">
+            All your data, including mood boards and preferences, will be permanently removed.
+          </p>
           {accountType === 'premium' && (
-            <span className="block mt-2 font-medium text-red-600 dark:text-red-400">
-              Note: Deleting your account will cancel any active subscription, but no refunds will be issued.
-            </span>
+            <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r">
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                <AlertTriangle className="inline-block w-4 h-4 mr-1 -mt-1" />
+                Important: Your active subscription will be canceled (no refunds will be issued).
+              </p>
+            </div>
           )}
-        </p>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <Button
             variant="outline"
