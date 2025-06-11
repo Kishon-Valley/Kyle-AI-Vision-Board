@@ -81,14 +81,24 @@ const UserProfile = () => {
       if (user) {
         try {
           // Check subscription status
-          const { data: subscriptionData } = await supabase
-            .from('subscriptions')
-            .select('status')
-            .eq('user_id', user.id)
-            .in('status', ['active', 'trialing'])
-            .single();
-            
-          setAccountType(subscriptionData ? 'premium' : 'free');
+          try {
+            const { data: subscriptionData, error: subscriptionError } = await supabase
+              .from('subscriptions')
+              .select('status')
+              .eq('user_id', user.id)
+              .in('status', ['active', 'trialing'])
+              .single();
+              
+            if (!subscriptionError) {
+              setAccountType(subscriptionData ? 'premium' : 'free');
+            } else {
+              // If table doesn't exist or other error, default to free
+              setAccountType('free');
+            }
+          } catch (error) {
+            console.warn('Error checking subscription status:', error);
+            setAccountType('free');
+          }
           
           const { data, error } = await supabase
             .from('profiles')
