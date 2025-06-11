@@ -23,14 +23,12 @@ export const useSubscription = () => {
           .select('status')
           .eq('user_id', user.id)
           .in('status', ['active', 'trialing'])
-          .single();
+          .maybeSingle();
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
           console.warn('Error checking subscription:', error);
-          setHasSubscription(false);
-        } else {
-          setHasSubscription(!!data);
         }
+        setHasSubscription(!!data);
       } catch (error) {
         console.error('Error checking subscription:', error);
         setHasSubscription(false);

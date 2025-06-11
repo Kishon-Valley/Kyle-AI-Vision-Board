@@ -5,7 +5,7 @@ import StripePaymentButton from '@/components/StripePaymentButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -15,6 +15,8 @@ const PaymentPage = () => {
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const navigate = useNavigate();
+  const location = useLocation();
+  const paymentSuccess = new URLSearchParams(location.search).get('success') === 'true';
   const { hasSubscription } = useSubscription();
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -30,7 +32,7 @@ const PaymentPage = () => {
   }
 
   // Only show subscription success message if user is authenticated and has an active subscription
-  if (isAuthenticated && hasSubscription) {
+  if (paymentSuccess || (isAuthenticated && hasSubscription)) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <Card className="max-w-2xl mx-auto">
