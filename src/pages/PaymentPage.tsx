@@ -54,7 +54,7 @@ const PaymentPage = () => {
   }
 
   // Only show subscription success message if user is authenticated and has an active subscription
-  if (paymentSuccess || (isAuthenticated && hasSubscription)) {
+  if (isAuthenticated && hasSubscription) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <Card className="max-w-2xl mx-auto">
