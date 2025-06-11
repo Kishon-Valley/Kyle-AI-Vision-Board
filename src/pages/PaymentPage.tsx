@@ -7,12 +7,28 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PaymentPage = () => {
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const navigate = useNavigate();
   const { hasSubscription } = useSubscription();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
 
   if (hasSubscription) {
     return (
