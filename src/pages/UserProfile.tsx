@@ -37,11 +37,6 @@ const UserProfile = () => {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   
-  // Redirect if not authenticated
-  if (!isLoading && !isAuthenticated) {
-    return <Navigate to="/" />;
-  }
-  
   // Function to toggle edit mode
   const toggleEditMode = () => {
     setIsEditing(prev => !prev);
@@ -437,6 +432,11 @@ const UserProfile = () => {
       </div>
     </div>
   );
+
+  // Redirect after hooks are set up to maintain consistent hook order
+  if (!isLoading && !isAuthenticated) {
+    return <Navigate to="/" />;
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">
