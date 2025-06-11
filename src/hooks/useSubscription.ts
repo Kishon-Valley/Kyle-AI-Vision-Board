@@ -13,7 +13,7 @@ export const useSubscription = () => {
   const checkSubscription = () => {
     const subscriptionStatus = localStorage.getItem('hasActiveSubscription');
     if (subscriptionStatus !== 'true') {
-      navigate('/payment');
+      navigate('/pricing');
       return false;
     }
     return true;
