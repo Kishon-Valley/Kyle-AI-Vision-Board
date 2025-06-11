@@ -6,11 +6,64 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const PaymentPage = () => {
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const navigate = useNavigate();
+  const { hasSubscription } = useSubscription();
+
+  if (hasSubscription) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-3xl font-bold">Thank you for your subscription!</CardTitle>
+            <CardDescription className="text-xl mt-2">
+              You have an active subscription to our service
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 mb-4">
+              Your subscription gives you access to all features including:
+            </p>
+            <ul className="space-y-2">
+              <li className="flex items-center">
+                <svg className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 24 24">
+                  <path d="M5 13l4 4L19 7" />
+                </svg>
+                Unlimited mood boards
+              </li>
+              <li className="flex items-center">
+                <svg className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 24 24">
+                  <path d="M5 13l4 4L19 7" />
+                </svg>
+                AI-powered design suggestions
+              </li>
+              <li className="flex items-center">
+                <svg className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 24 24">
+                  <path d="M5 13l4 4L19 7" />
+                </svg>
+                High-resolution downloads
+              </li>
+              <li className="flex items-center">
+                <svg className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 24 24">
+                  <path d="M5 13l4 4L19 7" />
+                </svg>
+                Priority support
+              </li>
+            </ul>
+          </CardContent>
+          <CardFooter className="flex justify-center">
+            <Button onClick={() => navigate('/questionnaire')} className="bg-orange-500 hover:bg-orange-600">
+              Start Creating
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
