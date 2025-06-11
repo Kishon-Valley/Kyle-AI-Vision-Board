@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { Request, Response } from 'express';
 
 // Initialize the Supabase admin client with service role key
 const supabaseAdmin = createClient(
@@ -8,8 +8,8 @@ const supabaseAdmin = createClient(
 );
 
 export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+  req: Request,
+  res: Response
 ) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -42,7 +42,14 @@ export default async function handler(
       });
     }
 
-    return res.status(200).json({ success: true });
+    // Clear any local storage items
+    res.setHeader('Clear-Site-Data', '"cache", "cookies", "localStorage", "sessionStorage"');
+    
+    return res.status(200).json({ 
+      success: true,
+      message: 'Account deleted successfully',
+      redirect: '/'
+    });
     
   } catch (error) {
     console.error('Error in delete-account API:', error);
