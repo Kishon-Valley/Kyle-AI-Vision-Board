@@ -20,6 +20,16 @@ const PaymentPage = () => {
   const { hasSubscription, isLoading: subLoading } = useSubscription();
   const { isAuthenticated, isLoading } = useAuth();
 
+  useEffect(() => {
+    if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+      toast.error('Stripe publishable key is not configured');
+      navigate('/');
+      return;
+    }
+    setStripePromise(loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY));
+  }, [navigate]);
+
+  // Show global loaders AFTER hooks have run to keep hook order consistent
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
@@ -97,15 +107,6 @@ const PaymentPage = () => {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
-      toast.error('Stripe publishable key is not configured');
-      navigate('/');
-      return;
-    }
-    setStripePromise(loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY));
-  }, [navigate]);
 
   const pricingPlans = [
     {
