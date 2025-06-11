@@ -40,7 +40,8 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
         return;
       }
 
-      // Use relative URL for API endpoint
+      console.log('Using price ID:', priceId);
+
       const response = await fetch('/api/create-subscription', {
         method: 'POST',
         headers: {
@@ -52,15 +53,14 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
       const responseData = await response.json();
 
+      if (!response.ok) {
+        throw new Error(responseData.error || responseData.details || `HTTP error! status: ${response.status}`);
+      }
+
       if (!responseData.clientSecret) {
-        throw new Error('No client secret received');
+        throw new Error('No client secret received from server');
       }
 
       const { error, paymentIntent } = await stripe.confirmCardPayment(responseData.clientSecret, {

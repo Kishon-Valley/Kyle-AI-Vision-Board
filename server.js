@@ -4,7 +4,14 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import { Stripe } from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('STRIPE_SECRET_KEY is not set in environment variables');
+  process.exit(1);
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16'
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,21 +23,24 @@ app.use(bodyParser.json());
 // Create subscription endpoint
 app.post('/api/create-subscription', async (req, res) => {
   try {
+    console.log('Received request body:', req.body);
+
     if (!req.body || !req.body.priceId) {
       return res.status(400).json({ error: 'Missing required priceId parameter' });
     }
 
     const { priceId } = req.body;
 
-    // In a real app, you'd get the customer ID from your database
-    // For this example, we'll create a new customer each time
+    // Create a customer
     const customer = await stripe.customers.create({
-      payment_method: 'pm_card_visa', // In production, get this from the client
-      email: 'customer@example.com', // In production, get this from your auth system
+      payment_method: 'pm_card_visa',
+      email: 'customer@example.com',
       invoice_settings: {
         default_payment_method: 'pm_card_visa',
       },
     });
+
+    console.log('Created customer:', customer.id);
 
     // Create a subscription
     const subscription = await stripe.subscriptions.create({
@@ -41,6 +51,17 @@ app.post('/api/create-subscription', async (req, res) => {
       expand: ['latest_invoice.payment_intent'],
     });
 
+    console.log('Created subscription:', subscription);
+
+    // Check if we have the payment intent
+    if (!subscription.latest_invoice?.payment_intent?.client_secret) {
+      console.error('No client secret in subscription response:', subscription);
+      return res.status(500).json({ 
+        error: 'Failed to create payment intent',
+        details: 'No client secret received from Stripe'
+      });
+    }
+
     const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
 
     res.status(200).json({
@@ -49,7 +70,19 @@ app.post('/api/create-subscription', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating subscription:', error);
-    res.status(500).json({ error: error.message || 'Failed to create subscription' });
+    
+    // Handle specific Stripe errors
+    if (error.type === 'StripeInvalidRequestError') {
+      return res.status(400).json({ 
+        error: 'Invalid request to payment service',
+        details: error.message
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to create subscription',
+      details: error.message
+    });
   }
 });
 
