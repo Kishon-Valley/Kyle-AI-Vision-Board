@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowRight, ArrowLeft, Home, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface FormData {
   roomType: string;
@@ -21,6 +22,7 @@ interface FormData {
 const QuestionnairePage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { hasSubscription, checkSubscription } = useSubscription();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
@@ -30,7 +32,7 @@ const QuestionnairePage = () => {
     budget: ''
   });
 
-  // Redirect unauthenticated users to home and prompt sign up
+  // Check authentication and subscription status
   useEffect(() => {
     if (!isAuthenticated) {
       toast({
@@ -39,8 +41,18 @@ const QuestionnairePage = () => {
         variant: 'destructive'
       });
       navigate('/');
+      return;
     }
-  }, [isAuthenticated, navigate]);
+
+    if (!hasSubscription) {
+      toast({
+        title: 'Subscription Required',
+        description: 'Please subscribe to create a mood board.',
+        variant: 'destructive'
+      });
+      navigate('/pricing');
+    }
+  }, [isAuthenticated, hasSubscription, navigate, toast]);
 
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;
@@ -60,6 +72,9 @@ const QuestionnairePage = () => {
   };
 
   const handleSubmit = () => {
+    if (!checkSubscription()) {
+      return;
+    }
     // Store form data and navigate to loading page
     localStorage.setItem('questionnaireData', JSON.stringify(formData));
     navigate('/loading');
