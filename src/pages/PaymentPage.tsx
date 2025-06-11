@@ -16,12 +16,6 @@ const PaymentPage = () => {
   const { hasSubscription } = useSubscription();
   const { isAuthenticated, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/login');
-    }
-  }, [isAuthenticated, isLoading, navigate]);
-
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
@@ -116,6 +110,87 @@ const PaymentPage = () => {
       ]
     }
   ];
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto text-center mb-12">
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Choose Your Plan</h1>
+          <p className="text-xl text-slate-600 dark:text-slate-300">
+            Select the plan that works best for you
+          </p>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-8 justify-center items-stretch">
+          {pricingPlans.map((plan) => (
+            <Card 
+              key={plan.id}
+              className={`w-full md:w-1/2 lg:w-1/3 transition-all duration-200 ${
+                billingInterval === plan.id 
+                  ? 'border-2 border-orange-500 dark:border-orange-600 scale-105' 
+                  : 'border-slate-200 dark:border-slate-700 hover:shadow-lg'
+              }`}
+            >
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+                <div className="flex items-baseline mt-2">
+                  <span className="text-4xl font-extrabold">{plan.price}</span>
+                  <span className="ml-2 text-slate-500 dark:text-slate-400">
+                    {plan.id === 'month' ? '/month' : '/year'}
+                  </span>
+                </div>
+                <CardDescription>{plan.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 mb-6">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-center">
+                      <svg
+                        className="h-5 w-5 text-green-500 mr-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter className="flex justify-center">
+                <Button
+                  variant={billingInterval === plan.id ? 'default' : 'outline'}
+                  className="w-full"
+                  onClick={() => setBillingInterval(plan.id as 'month' | 'year')}
+                >
+                  {billingInterval === plan.id ? 'Selected' : 'Select Plan'}
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+
+        <div className="max-w-4xl mx-auto text-center mt-12">
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Please Log In to Continue</h2>
+          <p className="text-xl text-slate-600 dark:text-slate-300 mb-8">
+            You need to be logged in to proceed with payment.
+          </p>
+          <Button
+            onClick={() => navigate('/login')}
+            className="bg-orange-500 hover:bg-orange-600"
+          >
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-12">
