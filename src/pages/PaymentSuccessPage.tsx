@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,17 +7,34 @@ import { useSubscription } from '@/hooks/useSubscription';
 
 const PaymentSuccessPage = () => {
   const navigate = useNavigate();
-  const { hasSubscription } = useSubscription();
+  const { hasSubscription, checkSubscription } = useSubscription();
+  const [isSettingSubscription, setIsSettingSubscription] = useState(false);
 
   useEffect(() => {
     // Set payment status in localStorage
     localStorage.setItem('hasActiveSubscription', 'true');
+    // Force a re-render to update subscription state
+    window.dispatchEvent(new Event('storage'));
   }, []);
 
-  const handleStartCreating = () => {
-    // Ensure subscription is set before navigating
-    localStorage.setItem('hasActiveSubscription', 'true');
-    navigate('/questionnaire');
+  const handleStartCreating = async () => {
+    try {
+      setIsSettingSubscription(true);
+      // Ensure subscription is set
+      localStorage.setItem('hasActiveSubscription', 'true');
+      // Force a re-render to update subscription state
+      window.dispatchEvent(new Event('storage'));
+      
+      // Wait a bit to ensure state is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Double check subscription before navigating
+      if (checkSubscription()) {
+        navigate('/questionnaire');
+      }
+    } finally {
+      setIsSettingSubscription(false);
+    }
   };
 
   return (
@@ -41,9 +58,10 @@ const PaymentSuccessPage = () => {
           <CardFooter className="flex justify-center">
             <Button
               onClick={handleStartCreating}
+              disabled={isSettingSubscription}
               className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white px-8 py-6 text-lg"
             >
-              Start Creating Moodboards
+              {isSettingSubscription ? 'Setting up...' : 'Start Creating Moodboards'}
             </Button>
           </CardFooter>
         </Card>
