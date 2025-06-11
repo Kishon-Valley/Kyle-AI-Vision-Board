@@ -334,9 +334,19 @@ const UserProfile = () => {
           body: JSON.stringify({ userId: user.id })
         });
         
+        // Handle non-JSON responses (like HTML error pages)
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('Non-JSON response:', text);
+          throw new Error('Invalid response from server');
+        }
+        
+        const data = await response.json();
+        
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to delete authentication data');
+          console.error('API error response:', data);
+          throw new Error(data.error || 'Failed to delete authentication data');
         }
       } catch (error) {
         console.error('Auth user deletion error:', error);

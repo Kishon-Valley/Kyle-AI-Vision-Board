@@ -3,6 +3,13 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { Stripe } from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase admin client
+const supabaseAdmin = createClient(
+  process.env.VITE_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
 
 if (!process.env.STRIPE_SECRET_KEY) {
   console.error('STRIPE_SECRET_KEY is not set in environment variables');
@@ -83,6 +90,50 @@ app.post('/api/create-subscription', async (req, res) => {
       error: 'Failed to create subscription',
       details: error.message
     });
+  }
+});
+
+// Delete user account endpoint
+app.post('/api/delete-account', async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
+  try {
+    // First, verify the user exists and get their auth ID
+    const { data: user, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    
+    if (userError || !user) {
+      console.error('Error fetching user:', userError);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Delete the user from auth
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    
+    if (deleteError) {
+      console.error('Error deleting user from auth:', deleteError);
+      return res.status(500).json({ error: 'Failed to delete user from authentication' });
+    }
+
+    // Delete user data from your database tables
+    // Replace 'user_data' with your actual table names
+    const { error: dataError } = await supabaseAdmin
+      .from('user_data')
+      .delete()
+      .eq('user_id', userId);
+
+    if (dataError) {
+      console.error('Error deleting user data:', dataError);
+      // Continue even if data deletion fails, as auth is already deleted
+    }
+
+    res.status(200).json({ success: true, message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Error in delete account:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
