@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const PaymentPage = () => {
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
@@ -182,10 +183,22 @@ const PaymentPage = () => {
             You need to be logged in to proceed with payment.
           </p>
           <Button
-            onClick={() => navigate('/login')}
+            onClick={() => {
+              // Use Supabase auth for login
+              supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                  redirectTo: `${window.location.origin}/auth/callback`
+                }
+              }).then(response => {
+                if (response.error) {
+                  toast.error('Error initiating login: ' + response.error.message);
+                }
+              });
+            }}
             className="bg-orange-500 hover:bg-orange-600"
           >
-            Go to Login
+            Sign in with Google
           </Button>
         </div>
       </div>
