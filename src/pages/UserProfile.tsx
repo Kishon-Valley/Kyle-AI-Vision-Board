@@ -695,7 +695,7 @@ const UserProfile = () => {
           </p>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+          <p className="text-sm text-slate-600 dark:text-red-300/90 mb-4">
             This action cannot be undone. All your data, including mood boards and preferences, will be permanently removed.
             {accountType === 'premium' && (
               <span className="block mt-2 font-medium text-red-600 dark:text-red-400">
