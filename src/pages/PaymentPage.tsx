@@ -17,7 +17,7 @@ const PaymentPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const paymentSuccess = new URLSearchParams(location.search).get('success') === 'true';
-  const { hasSubscription } = useSubscription();
+  const { hasSubscription, isLoading: subLoading } = useSubscription();
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -26,6 +26,18 @@ const PaymentPage = () => {
         <div className="flex flex-col items-center justify-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
           <p className="text-gray-600">Loading your account information...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // While checking subscription status, show loading spinner to prevent flashing pricing UI
+  if (isAuthenticated && subLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+          <p className="text-gray-600">Checking your subscription...</p>
         </div>
       </div>
     );
