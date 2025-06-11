@@ -321,11 +321,26 @@ const UserProfile = () => {
         throw new Error(`Failed to delete profile data: ${profileError.message}`);
       }
       
-      // Step 4: Delete auth user (this will sign them out)
-      const { error: deleteError } = await supabase.rpc('delete_user');
-      if (deleteError) {
-        console.error('Auth user deletion error:', deleteError);
-        throw new Error(`Failed to delete authentication data: ${deleteError.message}`);
+      // Step 4: Sign out first to clear the session
+      await supabase.auth.signOut();
+      
+      // Step 5: Delete the auth user using the admin API
+      try {
+        const response = await fetch('/api/delete-account', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.id })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete authentication data');
+        }
+      } catch (error) {
+        console.error('Auth user deletion error:', error);
+        throw new Error(`Failed to delete authentication data: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
       
       // If we reach here, all deletions were successful
@@ -334,8 +349,7 @@ const UserProfile = () => {
         description: 'Your account and all associated data have been permanently deleted.',
       });
       
-      // Sign out and redirect to home page
-      await supabase.auth.signOut();
+      // Redirect to home page
       window.location.href = '/';
       
     } catch (error) {
