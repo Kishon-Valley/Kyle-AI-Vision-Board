@@ -10,6 +10,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { handleError, secureLog } from '@/lib/error';
 
 const PaymentPage = () => {
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
@@ -22,6 +23,7 @@ const PaymentPage = () => {
 
   useEffect(() => {
     if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+      handleError(new Error('Stripe publishable key is not configured'), 'PaymentPage');
       toast.error('Stripe publishable key is not configured');
       navigate('/');
       return;

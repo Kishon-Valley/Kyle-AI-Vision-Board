@@ -14,7 +14,7 @@ export default async function handler(
   }
 
   try {
-    const { priceId } = req.body;
+    const { priceId, userId } = req.body;
 
     if (!priceId) {
       return res.status(400).json({ error: 'Missing required priceId parameter' });
@@ -22,10 +22,9 @@ export default async function handler(
 
     // Create customer
     const customer = await stripe.customers.create({
-      payment_method: 'pm_card_visa', // In production, get this from the client
-      email: 'customer@example.com', // In production, get this from your auth system
-      invoice_settings: {
-        default_payment_method: 'pm_card_visa',
+      email: req.body.email || 'customer@example.com', // Replace with real email
+      metadata: {
+        userId: userId || 'unknown',
       },
     });
 
@@ -47,6 +46,9 @@ export default async function handler(
     res.status(200).json({
       clientSecret,
       subscriptionId: subscription.id,
+      customerId: customer.id,
+      status: subscription.status,
+      currentPeriodEnd: (subscription as any).current_period_end,
     });
   } catch (error) {
     console.error('Error creating subscription:', error);

@@ -1,10 +1,11 @@
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 // Make sure to use the correct environment variable name for Vite
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -74,15 +75,40 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
         throw new Error('No client secret received from server');
       }
 
-      const { error, paymentIntent } = await stripe.confirmCardPayment(responseData.clientSecret, {
-        payment_method: {
-          card: elements.getElement(CardElement)!,
-        }
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/payment-success`,
+        },
+        redirect: 'if_required',
       });
 
       if (error) {
         toast.error(error.message || 'Payment failed');
       } else if (paymentIntent?.status === 'succeeded') {
+        try {
+          // Persist subscription details to Supabase so we can verify on next login
+          if (!supabase) throw new Error('Supabase client not available');
+
+          const { error: dbError } = await supabase.from('subscriptions').upsert(
+            {
+              user_id: user.id,
+              stripe_subscription_id: responseData.subscriptionId,
+              status: responseData.status || 'active',
+              current_period_end: new Date(responseData.currentPeriodEnd * 1000).toISOString(),
+              billing_interval: billingInterval,
+            },
+            {
+              onConflict: 'user_id',
+            }
+          );
+
+          if (dbError) {
+            console.error('Failed to save subscription in DB:', dbError);
+          }
+        } catch (saveErr) {
+          console.error('Error saving subscription:', saveErr);
+        }
         // Set subscription status in localStorage
         localStorage.setItem('hasActiveSubscription', 'true');
         // Redirect to success page
@@ -116,22 +142,7 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
       </div>
 
       <div className="border rounded-lg p-4">
-        <CardElement 
-          options={{
-            style: {
-              base: {
-                fontSize: '16px',
-                color: '#424770',
-                '::placeholder': {
-                  color: '#aab7c4',
-                },
-              },
-              invalid: {
-                color: '#9e2146',
-              },
-            },
-          }} 
-        />
+        <PaymentElement />
       </div>
 
       <Button 
