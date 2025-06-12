@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSubscription } from '@/hooks/useSubscription';
 import AnimatedBackground from '../components/AnimatedBackground';
 import ScrollingPictures from '../components/ScrollingPictures';
 import { Sparkles, Wand2, Download, ArrowRight, Loader2 } from 'lucide-react';
@@ -15,6 +16,7 @@ import { Sparkles, Wand2, Download, ArrowRight, Loader2 } from 'lucide-react';
 const LandingPage = () => {
   const { isAuthenticated, login, signUpWithEmail, loginWithGoogle } = useAuth();
   const { toast } = useToast();
+  const { hasSubscription } = useSubscription();
   const navigate = useNavigate();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [email, setEmail] = useState('');
@@ -45,6 +47,16 @@ const LandingPage = () => {
       navigate('/questionnaire');
     } else {
       setIsLoginOpen(true);
+    }
+  };
+
+  const handleCreateMoodBoard = () => {
+    if (!isAuthenticated) {
+      navigate('/pricing');
+    } else if (hasSubscription) {
+      navigate('/questionnaire');
+    } else {
+      navigate('/pricing');
     }
   };
 
@@ -405,12 +417,15 @@ const LandingPage = () => {
           <p className="text-xl text-orange-100 mb-8">
             Join thousands of users who've discovered their perfect design style with AI
           </p>
-          <Link to="/questionnaire">
-            <Button size="lg" variant="secondary" className="px-8 py-3 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              Create Your Mood Board
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </Link>
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            className="px-8 py-3 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            onClick={handleCreateMoodBoard}
+          >
+            Create Your Mood Board
+            <ArrowRight className="ml-2 w-5 h-5" />
+          </Button>
         </div>
       </section>
     </div>
