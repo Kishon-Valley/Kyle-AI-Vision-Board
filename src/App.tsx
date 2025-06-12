@@ -26,6 +26,7 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { hasSubscription, isLoading: isSubLoading } = useSubscription();
+  const navigate = useNavigate();
   
   // Show loading state while checking auth and subscription
   if (isAuthLoading || isSubLoading) {
@@ -36,14 +37,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  // Redirect to login if not authenticated
+  // If not authenticated, show login page
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    navigate('/', { replace: true });
+    return null;
   }
   
-  // Redirect to pricing if no subscription
+  // If no subscription, show pricing page
   if (!hasSubscription) {
-    return <Navigate to="/pricing" replace />;
+    navigate('/pricing', { replace: true });
+    return null;
   }
   
   return <>{children}</>;

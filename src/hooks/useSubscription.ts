@@ -9,6 +9,7 @@ export const useSubscription = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Initial check when component mounts
   useEffect(() => {
     const checkSubscriptionStatus = async () => {
       if (!user) {
@@ -28,7 +29,11 @@ export const useSubscription = () => {
         if (error && error.code !== 'PGRST116') {
           console.warn('Error checking subscription:', error);
         }
-        setHasSubscription(!!data);
+        
+        // Only update state if we actually got data
+        if (data !== null) {
+          setHasSubscription(!!data);
+        }
       } catch (error) {
         console.error('Error checking subscription:', error);
         setHasSubscription(false);
@@ -40,9 +45,41 @@ export const useSubscription = () => {
     checkSubscriptionStatus();
   }, [user]);
 
+  // Re-check subscription status when user changes
+  useEffect(() => {
+    if (!user) {
+      setHasSubscription(false);
+      return;
+    }
+
+    const checkSubscriptionStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('subscriptions')
+          .select('status')
+          .eq('user_id', user.id)
+          .in('status', ['active', 'trialing'])
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+          console.warn('Error checking subscription:', error);
+        }
+        
+        if (data !== null) {
+          setHasSubscription(!!data);
+        }
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setHasSubscription(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [user]);
+
   const checkSubscription = () => {
     if (!hasSubscription) {
-      navigate('/pricing');
+      navigate('/pricing', { replace: true });
       return false;
     }
     return true;
@@ -53,4 +90,4 @@ export const useSubscription = () => {
     isLoading,
     checkSubscription,
   };
-}; 
+};
