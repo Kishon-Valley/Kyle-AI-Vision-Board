@@ -3,14 +3,22 @@ import { loadStripe } from '@stripe/stripe-js';
 
 // Type definitions for environment variables
 interface EnvConfig {
+  // App URLs
+  appUrl: string;
+  apiUrl: string;
+  
+  // Stripe configuration
   stripe: {
-    publishableKey: string | undefined;
+    publishableKey: string;
     secretKey: string | undefined;
     webhookSecret: string | undefined;
     priceIds: {
-      monthly: string | undefined;
-      yearly: string | undefined;
+      monthly: string;
+      yearly: string;
     };
+    
+    // Stripe configuration validation
+    isConfigured: boolean;
   };
   supabase: {
     url: string | undefined;
@@ -25,24 +33,48 @@ interface EnvConfig {
 
 // Initialize environment configuration
 export const env: EnvConfig = {
+  // App URLs with production defaults
+  appUrl: import.meta.env.VITE_APP_URL || 'https://www.moodboardgenerator.com',
+  apiUrl: import.meta.env.VITE_API_URL || 'https://www.moodboardgenerator.com/api',
+  
+  // Stripe configuration
   stripe: {
-    publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
+    publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
     secretKey: process.env.STRIPE_SECRET_KEY,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     priceIds: {
-      monthly: import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY,
-      yearly: import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY,
+      monthly: import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY || '',
+      yearly: import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY || '',
+    },
+    // Check if Stripe is properly configured
+    get isConfigured() {
+      return Boolean(
+        this.publishableKey &&
+        this.secretKey &&
+        this.webhookSecret &&
+        this.priceIds.monthly &&
+        this.priceIds.yearly
+      );
     },
   },
+  
+  // Supabase configuration
   supabase: {
-    url: import.meta.env.VITE_SUPABASE_URL,
-    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-    serviceKey: process.env.SUPABASE_SERVICE_KEY,
+    url: import.meta.env.VITE_SUPABASE_URL || '',
+    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+    serviceKey: process.env.SUPABASE_SERVICE_KEY || '',
   },
+  
+  // OpenAI configuration
   openai: {
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
   },
-  allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || [],
+  
+  // CORS and security
+  allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || [
+    'https://www.moodboardgenerator.com',
+    'https://moodboardgenerator.com',
+  ],
 };
 
 // Initialize Supabase client

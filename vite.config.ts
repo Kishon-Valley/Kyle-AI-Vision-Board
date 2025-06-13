@@ -7,8 +7,23 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'production' ? '/' : '/',
   server: {
     host: "::",
-    port: 3001,
+    port: 3000, // Frontend port
     strictPort: true,
+    proxy: {
+      // Proxy API requests to the backend server
+      '/api': {
+        target: 'http://localhost:3001', // Backend server port
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      // Proxy webhook requests to the backend server
+      '/webhook': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   preview: {
     port: 3001,
@@ -16,7 +31,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-  ],
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

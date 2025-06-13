@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe, Stripe } from '@stripe/stripe-js';
-import CheckoutForm from '@/components/StripePaymentButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Loader2, Check, AlertCircle } from 'lucide-react';
+import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
-import { Loader2 } from 'lucide-react';
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const pricingPlans = [
   {
@@ -19,6 +15,7 @@ const pricingPlans = [
     id: 'month',
     price: '$0.80',
     description: 'Billed monthly',
+    priceId: env.stripe.priceIds.monthly,
     features: [
       'Unlimited mood boards',
       'AI-powered design suggestions',
@@ -31,6 +28,7 @@ const pricingPlans = [
     id: 'year',
     price: '$7.00',
     description: 'Billed annually (save 11%)',
+    priceId: env.stripe.priceIds.yearly,
     features: [
       'Everything in Monthly',
       '1 month free',
@@ -41,46 +39,75 @@ const pricingPlans = [
 ];
 
 const PaymentForm = () => {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<string | null>(null);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
+  // Handle payment success/failure from URL params
   useEffect(() => {
-    if (user) {
-      createSubscription();
+    const status = searchParams.get('status');
+    const message = searchParams.get('message');
+    
+    if (status === 'success') {
+      toast.success(message || 'Payment successful! Your subscription is now active.');
+    } else if (status === 'error') {
+      setError(message || 'There was an error processing your payment.');
+      toast.error(message || 'There was an error processing your payment.');
     }
-  }, [billingInterval, user]);
+  }, [searchParams]);
 
-  const createSubscription = async () => {
-    setClientSecret(null); // Reset on change
+  const handleSubscribe = async () => {
+    if (!user) {
+      toast.error('Please sign in to subscribe');
+      navigate('/login', { state: { from: '/pricing' } });
+      return;
+    }
+
+    setIsLoading('processing');
+    setError(null);
+    
     try {
-      const priceId = billingInterval === 'month'
-        ? import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY
-        : import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY;
-
-      if (!priceId) {
-        toast.error('Price ID is not configured');
-        return;
+      const plan = pricingPlans.find(p => p.id === billingInterval);
+      if (!plan?.priceId) {
+        throw new Error('Invalid plan selected');
       }
 
       const response = await fetch('/api/create-subscription', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, userId: user.id, email: user.email }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          priceId: plan.priceId, 
+          userId: user.id, 
+          email: user.email,
+          billingInterval: billingInterval
+        }),
       });
 
       const data = await response.json();
+      
       if (!response.ok) {
-        const errorData = data.error || 'Failed to create subscription';
-        throw new Error(errorData);
+        throw new Error(data.error?.message || data.error || 'Failed to create subscription');
       }
-      if (!data.clientSecret) {
-        throw new Error('Client secret not found in API response.');
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received from the server');
       }
-      setClientSecret(data.clientSecret);
     } catch (error) {
       console.error('Error creating subscription:', error);
-      toast.error(error.message || 'An error occurred');
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setError(errorMessage);
+      toast.error(`Subscription failed: ${errorMessage}`);
+      setIsLoading(null);
     }
   };
 
@@ -98,39 +125,35 @@ const PaymentForm = () => {
             className={`w-full md:w-1/2 lg:w-1/3 transition-all duration-200 ${
               billingInterval === plan.id 
                 ? 'border-2 border-orange-500 dark:border-orange-600 scale-105' 
-                : 'border-slate-200 dark:border-slate-700 hover:shadow-lg'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
             }`}
+            onClick={() => setBillingInterval(plan.id as 'month' | 'year')}
           >
             <CardHeader>
               <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
-              <div className="flex items-baseline mt-2">
-                <span className="text-4xl font-extrabold">{plan.price}</span>
-                <span className="ml-2 text-slate-500 dark:text-slate-400">
-                  {plan.id === 'month' ? '/month' : '/year'}
-                </span>
-              </div>
-              <CardDescription>{plan.description}</CardDescription>
+              <CardDescription className="text-lg">
+                {plan.price} <span className="text-sm text-slate-500">/ {plan.id}</span>
+              </CardDescription>
+              <p className="text-sm text-slate-500">{plan.description}</p>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 mb-6">
+              <ul className="space-y-2">
                 {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-center">
-                    <svg
-                      className="h-5 w-5 text-green-500 mr-2"
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    {feature}
+                  <li key={index} className="flex items-start">
+                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <span>{feature}</span>
                   </li>
                 ))}
               </ul>
             </CardContent>
-            <CardFooter className="flex justify-center">
+            <CardFooter>
               <Button
-                variant={billingInterval === plan.id ? 'default' : 'outline'}
-                className="w-full"
-                onClick={() => setBillingInterval(plan.id as 'month' | 'year')}
+                className={`w-full ${
+                  billingInterval === plan.id 
+                    ? 'bg-orange-500 hover:bg-orange-600' 
+                    : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900'
+                }`}
+                disabled={isLoading === 'processing'}
               >
                 {billingInterval === plan.id ? 'Selected' : 'Select Plan'}
               </Button>
@@ -138,36 +161,94 @@ const PaymentForm = () => {
           </Card>
         ))}
       </div>
-
-      <div className="max-w-4xl mx-auto text-center mt-12">
-        <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Complete Your Subscription</h2>
-        <p className="text-xl text-slate-600 dark:text-slate-300 mb-8">
-          {billingInterval === 'month' ? 'Pay $0.80/month' : 'Pay $7.00/year'}
-        </p>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
-          Your payment is secure and encrypted. We use Stripe for secure payment processing.
-        </p>
-        <div className="max-w-lg mx-auto">
-          {clientSecret ? (
-            <Elements stripe={stripePromise} options={{ clientSecret }}>
-              <CheckoutForm billingInterval={billingInterval} />
-            </Elements>
+      
+      <div className="mt-12 max-w-2xl mx-auto">
+        <h2 className="text-2xl font-bold text-center mb-6">Ready to get started?</h2>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        <Button 
+          onClick={handleSubscribe}
+          disabled={!billingInterval || isLoading === 'processing'}
+          className="w-full max-w-md mx-auto block"
+          size="lg"
+        >
+          {isLoading === 'processing' ? (
+            <span className="flex items-center justify-center">
+              <Loader2 className="animate-spin h-5 w-5 mr-2" />
+              Processing...
+            </span>
           ) : (
-            <div className="text-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto mb-4" />
-              <p className="text-slate-500">Initializing secure payment...</p>
-            </div>
+            `Get Started with ${billingInterval === 'month' ? 'Monthly' : 'Yearly'} Plan`
           )}
-        </div>
+        </Button>
+        
+        <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
+          Secure payment powered by{' '}
+          <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">
+            Stripe
+          </a>
+        </p>
       </div>
     </div>
   );
 };
 
+interface SubscriptionStatus {
+  hasSubscription: boolean;
+  isLoading: boolean;
+}
+
 const PaymentPage = () => {
   const navigate = useNavigate();
-  const { hasSubscription, isLoading: subLoading } = useSubscription();
   const { isAuthenticated, isLoading } = useAuth();
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({ 
+    hasSubscription: false, 
+    isLoading: true 
+  });
+
+  // Check subscription status when user is authenticated
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!isAuthenticated) {
+        setSubscriptionStatus({ hasSubscription: false, isLoading: false });
+        return;
+      }
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setSubscriptionStatus({ hasSubscription: false, isLoading: false });
+          return;
+        }
+
+        // Check if user has an active subscription in the database
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('subscription_status')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        setSubscriptionStatus({
+          hasSubscription: userData?.subscription_status === 'active',
+          isLoading: false,
+        });
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setSubscriptionStatus({ hasSubscription: false, isLoading: false });
+      }
+    };
+
+    checkSubscription();
+  }, [isAuthenticated]);
 
   if (isLoading) {
     return (
@@ -180,18 +261,18 @@ const PaymentPage = () => {
     );
   }
 
-  if (isAuthenticated && subLoading) {
+  if (isAuthenticated && subscriptionStatus.isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <div className="flex flex-col items-center justify-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-          <p className="text-gray-600">Checking your subscription...</p>
+          <p className="text-gray-600">Checking your subscription status...</p>
         </div>
       </div>
     );
   }
 
-  if (isAuthenticated && hasSubscription) {
+  if (isAuthenticated && subscriptionStatus.hasSubscription) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <Card className="max-w-2xl mx-auto">

@@ -6,11 +6,14 @@
   "scripts": {
     "frontend": "vite",
     "backend": "node server.js",
-    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "server": "node server/stripe-webhook.js",
+    "dev:server": "nodemon server/stripe-webhook.js",
+    "dev": "concurrently \"npm run server\" \"vite\"",
     "build": "vite build && cp vercel.json dist/",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server/stripe-webhook.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
