@@ -61,7 +61,8 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval: ini
         body: JSON.stringify({
           priceId,
           billingInterval,
-          userId: user.id
+          userId: user.id,
+          email: user.email
         }),
       });
 
