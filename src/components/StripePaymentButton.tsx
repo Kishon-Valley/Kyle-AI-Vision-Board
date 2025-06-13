@@ -68,12 +68,6 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval }) =
   );
 };
 
-const StripePaymentButton = ({ billingInterval }: StripePaymentButtonProps) => {
-  return (
-    <Elements stripe={stripePromise}>
-      <CheckoutForm billingInterval={billingInterval} />
-    </Elements>
-  );
-};
 
-export default StripePaymentButton;
+
+export default CheckoutForm;
