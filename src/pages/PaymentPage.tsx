@@ -76,21 +76,37 @@ const PaymentForm = () => {
       }
 
       // First, ensure the user exists in our database
-      const { error: userError } = await supabase
-        .from('users')
-        .upsert(
-          {
-            id: user.id,
-            email: user.email,
-            subscription_status: 'inactive',
-            updated_at: new Date().toISOString()
-          },
-          { onConflict: 'id' }
-        );
+      try {
+        const { error: userError } = await supabase.rpc('create_or_update_user', {
+          user_id: user.id,
+          user_email: user.email,
+          user_subscription_status: 'inactive'
+        });
 
-      if (userError) {
-        console.error('Error ensuring user exists:', userError);
-        throw new Error('Failed to update user information');
+        if (userError) {
+          console.error('Error ensuring user exists:', userError);
+          // If the RPC fails, try the direct table insert as fallback
+          const { error: insertError } = await supabase
+            .from('users')
+            .upsert(
+              {
+                id: user.id,
+                email: user.email,
+                subscription_status: 'inactive',
+                updated_at: new Date().toISOString()
+              },
+              { onConflict: 'id' }
+            );
+
+          if (insertError) {
+            console.error('Fallback user creation failed:', insertError);
+            throw new Error('Failed to update user information');
+          }
+        }
+      } catch (error) {
+        console.error('Error in user creation:', error);
+        // Continue with subscription even if user creation fails
+        // The backend will handle user creation if needed
       }
 
       // Then create the subscription
