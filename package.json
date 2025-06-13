@@ -9,9 +9,9 @@
     "server": "node server/stripe-webhook.js",
     "dev:server": "nodemon server/stripe-webhook.js",
     "dev": "concurrently \"npm run server\" \"vite\"",
-    "build": "vite build",
+    "build": "vite build && cp vercel.json dist/ 2>/dev/null || true",
     "build:dev": "vite build --mode development",
-    "vercel-build": "vite build && mv vercel.json dist/",
+    "vercel-build": "npm run build",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node server/stripe-webhook.js"

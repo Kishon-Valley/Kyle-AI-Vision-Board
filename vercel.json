@@ -3,14 +3,19 @@
   "builds": [
     { 
       "src": "package.json", 
-      "use": "@vercel/static-build", 
-      "config": { 
-        "distDir": "dist",
-        "buildCommand": "npm run vercel-build"
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
       }
     },
-    { "src": "src/app/api/**/*.ts", "use": "@vercel/node" },
-    { "src": "server.js", "use": "@vercel/node" }
+    { 
+      "src": "src/app/api/**/*.ts", 
+      "use": "@vercel/node" 
+    },
+    { 
+      "src": "server.js", 
+      "use": "@vercel/node" 
+    }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
