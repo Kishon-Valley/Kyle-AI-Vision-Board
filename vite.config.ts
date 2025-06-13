@@ -9,14 +9,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 3001,
     strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-        ws: true
-      }
-    }
+
   },
   preview: {
     port: 3001,

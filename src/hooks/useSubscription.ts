@@ -45,38 +45,6 @@ export const useSubscription = () => {
     checkSubscriptionStatus();
   }, [user]);
 
-  // Re-check subscription status when user changes
-  useEffect(() => {
-    if (!user) {
-      setHasSubscription(false);
-      return;
-    }
-
-    const checkSubscriptionStatus = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('subscriptions')
-          .select('status')
-          .eq('user_id', user.id)
-          .in('status', ['active', 'trialing'])
-          .maybeSingle();
-
-        if (error && error.code !== 'PGRST116') {
-          console.warn('Error checking subscription:', error);
-        }
-        
-        if (data !== null) {
-          setHasSubscription(!!data);
-        }
-      } catch (error) {
-        console.error('Error checking subscription:', error);
-        setHasSubscription(false);
-      }
-    };
-
-    checkSubscriptionStatus();
-  }, [user]);
-
   const checkSubscription = () => {
     if (!hasSubscription) {
       navigate('/pricing', { replace: true });
