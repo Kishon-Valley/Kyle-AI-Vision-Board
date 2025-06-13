@@ -53,7 +53,6 @@ const PaymentForm = () => {
 
   const createSubscription = async () => {
     setClientSecret(null); // Reset on change
-    console.log('[PaymentForm] Creating subscription, clientSecret reset.');
     try {
       const priceId = billingInterval === 'month'
         ? import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY
@@ -71,12 +70,12 @@ const PaymentForm = () => {
       });
 
       const data = await response.json();
-      console.log('[PaymentForm] Received from API:', data);
-      if (!response.ok) throw new Error(data.error || 'Failed to create subscription');
+      if (!response.ok) {
+        const errorData = data.error || 'Failed to create subscription';
+        throw new Error(errorData);
+      }
       if (!data.clientSecret) {
-        console.error('[PaymentForm] API response missing clientSecret.');
-        toast.error('Could not initialize payment. Please try again.');
-        return;
+        throw new Error('Client secret not found in API response.');
       }
       setClientSecret(data.clientSecret);
     } catch (error) {
@@ -84,8 +83,6 @@ const PaymentForm = () => {
       toast.error(error.message || 'An error occurred');
     }
   };
-
-  console.log('[PaymentForm] Rendering with clientSecret:', clientSecret);
 
   return (
     <div className="container mx-auto px-4 py-12">
