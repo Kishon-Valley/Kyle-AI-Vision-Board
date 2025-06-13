@@ -12,24 +12,57 @@ import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { handleError, secureLog } from '@/lib/error';
 
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
 const PaymentPage = () => {
-  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const navigate = useNavigate();
   const location = useLocation();
-  const paymentSuccess = new URLSearchParams(location.search).get('success') === 'true';
   const { hasSubscription, isLoading: subLoading } = useSubscription();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
-      handleError(new Error('Stripe publishable key is not configured'), 'PaymentPage');
-      toast.error('Stripe publishable key is not configured');
-      navigate('/');
-      return;
+    if (isAuthenticated && user) {
+      createSubscription();
     }
-    setStripePromise(loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY));
-  }, [navigate]);
+  }, [billingInterval, isAuthenticated, user]);
+
+  const createSubscription = async () => {
+    try {
+      const priceId = billingInterval === 'month'
+        ? import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY
+        : import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY;
+
+      if (!priceId) {
+        toast.error('Price ID is not configured');
+        return;
+      }
+
+      const response = await fetch('/api/create-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId,
+          userId: user.id,
+          email: user.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create subscription');
+      }
+
+      setClientSecret(data.clientSecret);
+    } catch (error) {
+      console.error('Error creating subscription:', error);
+      toast.error(error.message || 'An error occurred');
+    }
+  };
 
   // Show global loaders AFTER hooks have run to keep hook order consistent
   if (isLoading) {
@@ -338,14 +371,14 @@ const PaymentPage = () => {
         </p>
 
         <div className="max-w-lg mx-auto">
-          {stripePromise ? (
-            <Elements stripe={stripePromise}>
+          {clientSecret ? (
+            <Elements stripe={stripePromise} options={{ clientSecret }}>
               <StripePaymentButton billingInterval={billingInterval} />
             </Elements>
           ) : (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-              <p className="text-slate-500">Loading payment processing...</p>
+              <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto mb-4" />
+              <p className="text-slate-500">Initializing secure payment...</p>
             </div>
           )}
         </div>
