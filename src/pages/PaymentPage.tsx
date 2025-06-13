@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Check, AlertCircle } from 'lucide-react';
 import { env } from '@/lib/env';
-import { supabase } from '@/lib/supabase';
+import { supabase, checkUserSubscription } from '@/lib/supabase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const pricingPlans = [
@@ -75,27 +75,62 @@ const PaymentForm = () => {
         throw new Error('Invalid plan selected');
       }
 
+      // First, ensure the user exists in our database
+      const { error: userError } = await supabase
+        .from('users')
+        .upsert(
+          {
+            id: user.id,
+            email: user.email,
+            subscription_status: 'inactive',
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'id' }
+        );
+
+      if (userError) {
+        console.error('Error ensuring user exists:', userError);
+        throw new Error('Failed to update user information');
+      }
+
+      // Then create the subscription
       const response = await fetch('/api/create-subscription', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
         },
         credentials: 'include',
         body: JSON.stringify({ 
           priceId: plan.priceId, 
           userId: user.id, 
           email: user.email,
-          billingInterval: billingInterval
+          billingInterval: billingInterval,
+          successUrl: `${window.location.origin}/payment-success`,
+          cancelUrl: `${window.location.origin}/pricing`
         }),
       });
 
-      const data = await response.json();
-      
+      // Handle non-OK responses
       if (!response.ok) {
-        throw new Error(data.error?.message || data.error || 'Failed to create subscription');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Subscription error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        
+        throw new Error(
+          errorData?.error?.message || 
+          errorData?.message || 
+          `Failed to create subscription (${response.status} ${response.statusText})`
+        );
       }
 
+      
+      const data = await response.json();
+      
       // Redirect to Stripe Checkout
       if (data.url) {
         window.location.href = data.url;
@@ -104,9 +139,31 @@ const PaymentForm = () => {
       }
     } catch (error) {
       console.error('Error creating subscription:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      
+      let errorMessage = 'Failed to create subscription';
+      
+      if (error instanceof Error) {
+        // Handle specific error messages
+        if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Unable to connect to the server. Please check your internet connection.';
+        } else if (error.message.includes('User not found')) {
+          errorMessage = 'User account not found. Please sign out and try again.';
+        } else if (error.message.includes('price_')) {
+          errorMessage = 'Invalid subscription plan. Please try again or contact support.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       setError(errorMessage);
-      toast.error(`Subscription failed: ${errorMessage}`);
+      toast.error(errorMessage, {
+        duration: 5000,
+        action: {
+          label: 'Retry',
+          onClick: () => handleSubscribe(),
+        },
+      });
+    } finally {
       setIsLoading(null);
     }
   };
@@ -203,6 +260,7 @@ const PaymentForm = () => {
 interface SubscriptionStatus {
   hasSubscription: boolean;
   isLoading: boolean;
+  error?: string;
 }
 
 const PaymentPage = () => {
@@ -228,22 +286,30 @@ const PaymentPage = () => {
           return;
         }
 
-        // Check if user has an active subscription in the database
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('subscription_status')
-          .eq('id', user.id)
-          .single();
-
-        if (error) throw error;
+        // Use the new checkUserSubscription function
+        const { hasSubscription, error } = await checkUserSubscription(user.id);
+        
+        if (error) {
+          console.error('Subscription check error:', error);
+          setSubscriptionStatus({ 
+            hasSubscription: false, 
+            isLoading: false,
+            error: error
+          });
+          return;
+        }
 
         setSubscriptionStatus({
-          hasSubscription: userData?.subscription_status === 'active',
+          hasSubscription,
           isLoading: false,
         });
       } catch (error) {
-        console.error('Error checking subscription:', error);
-        setSubscriptionStatus({ hasSubscription: false, isLoading: false });
+        console.error('Error in subscription check:', error);
+        setSubscriptionStatus({ 
+          hasSubscription: false, 
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Failed to check subscription'
+        });
       }
     };
 
