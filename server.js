@@ -30,18 +30,38 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors({
+// CORS configuration
+const corsOptions = {
   origin: [
     'https://www.moodboardgenerator.com',
     'https://moodboardgenerator.com',
     'http://localhost:5173'
   ],
-  credentials: true
-}));
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
+// Body parser middleware
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// Add headers middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -51,86 +71,137 @@ app.get('/api/health', (req, res) => {
 // Create subscription endpoint
 app.post('/api/create-subscription', async (req, res) => {
   try {
-    console.log('Received request body:', req.body);
+    console.log('Received request body:', JSON.stringify(req.body, null, 2));
 
-    if (!req.body || !req.body.priceId || !req.body.userId || !req.body.email) {
+    // Validate required fields
+    const requiredFields = ['priceId', 'userId', 'email', 'billingInterval'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    
+    if (missingFields.length > 0) {
+      console.error('Missing required fields:', missingFields);
       return res.status(400).json({ 
+        success: false,
         error: 'Missing required parameters',
-        details: {
+        missingFields: missingFields,
+        receivedData: {
           priceId: !!req.body.priceId,
           userId: !!req.body.userId,
-          email: !!req.body.email
+          email: !!req.body.email,
+          billingInterval: req.body.billingInterval
         }
       });
     }
 
     const { priceId, userId, email, billingInterval } = req.body;
     const appUrl = process.env.VITE_APP_URL || 'https://www.moodboardgenerator.com';
-    
-    // Create or get customer in Stripe
-    let customer;
-    
-    // Check if user already has a customer ID in Supabase
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('stripe_customer_id')
-      .eq('id', userId)
-      .single();
+      // Create or get customer in Stripe
+      let customer;
       
-    if (userError || !userData) {
-      // Create new customer in Stripe
-      customer = await stripe.customers.create({
-        email: email,
-        metadata: { userId }
-      });
-      
-      // Save customer ID to Supabase
-      const { error: updateError } = await supabase
+      // Check if user already has a customer ID in Supabase
+      const { data: userData, error: userError } = await supabase
         .from('users')
-        .upsert({
-          id: userId,
+        .select('stripe_customer_id, email')
+        .eq('id', userId)
+        .single();
+      
+      if (userError || !userData) {
+        console.log('Creating new Stripe customer for user:', { userId, email });
+        // Create new customer in Stripe
+        customer = await stripe.customers.create({
           email: email,
-          stripe_customer_id: customer.id,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'id'
+          metadata: { userId },
+          name: email.split('@')[0] // Use the part before @ as the name
         });
         
-      if (updateError) {
-        console.error('Error updating user in Supabase:', updateError);
-        return res.status(500).json({ error: 'Failed to update user data' });
+        console.log('Created Stripe customer:', customer.id);
+        
+        // Save customer ID to Supabase
+        const { error: updateError } = await supabase
+          .from('users')
+          .upsert({
+            id: userId,
+            email: email,
+            stripe_customer_id: customer.id,
+            subscription_status: 'inactive',
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'id'
+          });
+          
+        if (updateError) {
+          console.error('Error updating user in Supabase:', updateError);
+          return res.status(500).json({ 
+            success: false,
+            error: 'Failed to update user data',
+            details: updateError.message 
+          });
+        }
+      } else {
+        // Use existing customer
+        console.log('Using existing Stripe customer:', userData.stripe_customer_id);
+        customer = { id: userData.stripe_customer_id };
       }
-    } else {
-      // Use existing customer
-      customer = { id: userData.stripe_customer_id };
-    }
-    
-    // Create checkout session
-    const session = await stripe.checkout.sessions.create({
-      customer: customer.id,
-      payment_method_types: ['card'],
-      line_items: [{
-        price: priceId,
-        quantity: 1,
-      }],
-      mode: 'subscription',
-      success_url: `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/pricing`,
-      metadata: {
-        userId,
-        priceId,
-        billingInterval
-      }
-    });
-    
-    res.json({ url: session.url });
+      
+      // Create checkout session
+      console.log('Creating checkout session with price ID:', priceId);
+      const session = await stripe.checkout.sessions.create({
+        customer: customer.id,
+        payment_method_types: ['card'],
+        line_items: [{
+          price: priceId,
+          quantity: 1,
+        }],
+        mode: 'subscription',
+        subscription_data: {
+          metadata: {
+            userId,
+            billingInterval
+          }
+        },
+        payment_intent_data: {
+          metadata: {
+            userId,
+            priceId,
+            billingInterval
+          }
+        },
+        success_url: `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${appUrl}/pricing`,
+        metadata: {
+          userId,
+          priceId,
+          billingInterval
+        }
+      });
+      
+      console.log('Created checkout session:', session.id);
+      
+      res.json({ 
+        success: true, 
+        url: session.url,
+        sessionId: session.id
+      });
     
   } catch (error) {
-    console.error('Error creating subscription:', error);
-    res.status(500).json({ 
-      error: 'Failed to create subscription',
-      details: error.message 
+    console.error('Error in create-subscription:', {
+      message: error.message,
+      stack: error.stack,
+      type: error.type,
+      code: error.code,
+      statusCode: error.statusCode,
+      raw: error.raw ? JSON.stringify(error.raw, null, 2) : undefined
     });
+    
+    const statusCode = error.statusCode || 500;
+    const errorResponse = {
+      success: false,
+      error: 'Failed to create subscription',
+      message: error.message,
+      code: error.code || 'unknown_error',
+      details: error.raw ? error.raw.message : undefined
+    };
+    
+    res.status(statusCode).json(errorResponse);
   }
 });
 

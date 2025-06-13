@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     }
 
     // Forward the request to the backend server
-    const apiUrl = `${env.apiUrl}/create-checkout-session`;
+    const apiUrl = `${env.apiUrl}/create-subscription`;
     console.log('Forwarding to backend:', apiUrl);
     
     const response = await fetch(apiUrl, {
