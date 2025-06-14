@@ -17,10 +17,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 // Initialize Supabase
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Supabase URL or key is not set in environment variables');
+  console.error('VITE_SUPABASE_URL or SUPABASE_SERVICE_KEY is not set in environment variables');
   process.exit(1);
 }
 
