@@ -50,10 +50,6 @@ app.use(cors(corsOptions));
 // Handle preflight requests
 app.options(/.*/, cors(corsOptions));
 
-// Body parser middleware
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-
 // Add headers middleware
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin);
@@ -62,6 +58,50 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
+
+// Stripe webhook handler needs raw body. Define it before body-parser middleware.
+app.post('/api/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'checkout.session.completed':
+      const session = event.data.object;
+      await handleCheckoutSessionCompleted(session);
+      break;
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted':
+      const subscription = event.data.object;
+      await handleSubscriptionUpdated(subscription);
+      break;
+    case 'invoice.payment_succeeded':
+      const invoice = event.data.object;
+      await handleInvoicePaid(invoice);
+      break;
+    case 'invoice.payment_failed':
+      await handlePaymentFailed(event.data.object);
+      break;
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  // Return a 200 response to acknowledge receipt of the event
+  res.json({ received: true });
+});
+
+// Body parser middleware for all other routes
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -170,45 +210,7 @@ app.post('/api/create-subscription', async (req, res) => {
   }
 });
 
-// Webhook handler for Stripe events
-app.post('/api/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object;
-      await handleCheckoutSessionCompleted(session);
-      break;
-    case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
-      const subscription = event.data.object;
-      await handleSubscriptionUpdated(subscription);
-      break;
-    case 'invoice.payment_succeeded':
-      const invoice = event.data.object;
-      await handleInvoicePaid(invoice);
-      break;
-    case 'invoice.payment_failed':
-      await handlePaymentFailed(event.data.object);
-      break;
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
-
-  // Return a 200 response to acknowledge receipt of the event
-  res.json({ received: true });
-});
 
 async function handleCheckoutSessionCompleted(session) {
   const userId = session.metadata.userId;
