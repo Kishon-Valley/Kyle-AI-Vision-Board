@@ -1,9 +1,9 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const Stripe = require('stripe');
-const { createClient } = require('@supabase/supabase-js');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -345,4 +345,4 @@ process.on('SIGTERM', () => {
 });
 
 // Export the Express API
-module.exports = app;
+export default app;
