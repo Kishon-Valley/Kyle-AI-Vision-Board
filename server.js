@@ -73,7 +73,6 @@ app.post('/api/create-subscription', async (req, res) => {
   try {
     console.log('Received request body:', JSON.stringify(req.body, null, 2));
 
-    // Validate required fields
     const requiredFields = ['priceId', 'userId', 'email', 'billingInterval'];
     const missingFields = requiredFields.filter(field => !req.body[field]);
     
@@ -83,125 +82,90 @@ app.post('/api/create-subscription', async (req, res) => {
         success: false,
         error: 'Missing required parameters',
         missingFields: missingFields,
-        receivedData: {
-          priceId: !!req.body.priceId,
-          userId: !!req.body.userId,
-          email: !!req.body.email,
-          billingInterval: req.body.billingInterval
-        }
       });
     }
 
     const { priceId, userId, email, billingInterval } = req.body;
     const appUrl = process.env.VITE_APP_URL || 'https://www.moodboardgenerator.com';
-      // Create or get customer in Stripe
-      let customer;
+    let customer;
       
-      // Check if user already has a customer ID in Supabase
-      const { data: userData, error: userError } = await supabase
+    console.log(`[1/5] Checking for existing user ${userId} in Supabase...`);
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('stripe_customer_id, email')
+      .eq('id', userId)
+      .single();
+    
+    // 'PGRST116' is the code for 'exact one row not found', which is expected if the user is new.
+    if (userError && userError.code !== 'PGRST116') { 
+        console.error('Supabase user query failed:', userError);
+        throw new Error(`Supabase user query failed: ${userError.message}`);
+    }
+    console.log('[2/5] Supabase user check complete.');
+      
+    if (!userData) {
+      console.log(`[3/5] No user found. Creating new Stripe customer for ${email}...`);
+      customer = await stripe.customers.create({
+        email: email,
+        metadata: { userId },
+        name: email.split('@')[0]
+      });
+      console.log(`Stripe customer ${customer.id} created.`);
+        
+      console.log(`[4/5] Saving new customer ID to Supabase for user ${userId}...`);
+      const { error: updateError } = await supabase
         .from('users')
-        .select('stripe_customer_id, email')
-        .eq('id', userId)
-        .single();
-      
-      if (userError || !userData) {
-        console.log('Creating new Stripe customer for user:', { userId, email });
-        // Create new customer in Stripe
-        customer = await stripe.customers.create({
+        .upsert({
+          id: userId,
           email: email,
-          metadata: { userId },
-          name: email.split('@')[0] // Use the part before @ as the name
-        });
-        
-        console.log('Created Stripe customer:', customer.id);
-        
-        // Save customer ID to Supabase
-        const { error: updateError } = await supabase
-          .from('users')
-          .upsert({
-            id: userId,
-            email: email,
-            stripe_customer_id: customer.id,
-            subscription_status: 'inactive',
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'id'
-          });
+          stripe_customer_id: customer.id,
+          subscription_status: 'inactive',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
           
-        if (updateError) {
-          console.error('Error updating user in Supabase:', updateError);
-          return res.status(500).json({ 
-            success: false,
-            error: 'Failed to update user data',
-            details: updateError.message 
-          });
-        }
-      } else {
-        // Use existing customer
-        console.log('Using existing Stripe customer:', userData.stripe_customer_id);
-        customer = { id: userData.stripe_customer_id };
+      if (updateError) {
+        console.error('Error saving customer ID to Supabase:', updateError);
+        throw new Error(`Failed to update user in Supabase: ${updateError.message}`);
       }
+      console.log('Supabase user updated with Stripe customer ID.');
+
+    } else {
+      console.log(`[3/5] Found existing Stripe customer: ${userData.stripe_customer_id}`);
+      customer = { id: userData.stripe_customer_id };
+    }
       
-      // Create checkout session
-      console.log('Creating checkout session with price ID:', priceId);
-      const session = await stripe.checkout.sessions.create({
-        customer: customer.id,
-        payment_method_types: ['card'],
-        line_items: [{
-          price: priceId,
-          quantity: 1,
-        }],
-        mode: 'subscription',
-        subscription_data: {
-          metadata: {
-            userId,
-            billingInterval
-          }
-        },
-        payment_intent_data: {
-          metadata: {
-            userId,
-            priceId,
-            billingInterval
-          }
-        },
-        success_url: `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${appUrl}/pricing`,
-        metadata: {
-          userId,
-          priceId,
-          billingInterval
-        }
-      });
+    console.log(`[5/5] Creating Stripe checkout session for customer ${customer.id}...`);
+    const session = await stripe.checkout.sessions.create({
+      customer: customer.id,
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      mode: 'subscription',
+      subscription_data: { metadata: { userId, billingInterval } },
+      success_url: `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/pricing`,
+      metadata: { userId, priceId, billingInterval }
+    });
       
-      console.log('Created checkout session:', session.id);
-      
-      res.json({ 
-        success: true, 
-        url: session.url,
-        sessionId: session.id
-      });
+    console.log('Stripe checkout session created:', session.id);
+    res.json({ 
+      success: true, 
+      url: session.url,
+      sessionId: session.id
+    });
     
   } catch (error) {
-    console.error('Error in create-subscription:', {
+    console.error('CRITICAL ERROR in create-subscription:', {
       message: error.message,
       stack: error.stack,
       type: error.type,
       code: error.code,
-      statusCode: error.statusCode,
-      raw: error.raw ? JSON.stringify(error.raw, null, 2) : undefined
     });
     
-    const statusCode = error.statusCode || 500;
-    const errorResponse = {
+    res.status(500).json({
       success: false,
-      error: 'Failed to create subscription',
-      message: error.message,
-      code: error.code || 'unknown_error',
-      details: error.raw ? error.raw.message : undefined
-    };
-    
-    res.status(statusCode).json(errorResponse);
+      error: 'A server error occurred while creating the subscription.',
+      details: 'An internal error prevented processing the request. Please check the server logs for more information.',
+    });
   }
 });
 
