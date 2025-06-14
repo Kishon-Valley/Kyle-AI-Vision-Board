@@ -108,6 +108,30 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Endpoint to verify a checkout session
+app.post('/api/verify-session', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'Session ID is required.' });
+    }
+
+    console.log(`[1/2] Verifying session ${sessionId}...`);
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status === 'paid') {
+      console.log(`[2/2] Session ${sessionId} is paid.`);
+      res.json({ success: true, status: session.status, payment_status: session.payment_status });
+    } else {
+      console.log(`[2/2] Session ${sessionId} is not paid. Status: ${session.payment_status}`);
+      res.status(402).json({ success: false, status: session.status, payment_status: session.payment_status });
+    }
+  } catch (error) {
+    console.error('CRITICAL ERROR in verify-session:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Create subscription endpoint
 app.post('/api/create-subscription', async (req, res) => {
   try {
