@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+
 import { loadStripe } from '@stripe/stripe-js';
 
 // Type definitions for environment variables
@@ -77,11 +77,7 @@ export const env: EnvConfig = {
   ],
 };
 
-// Initialize Supabase client
-export const supabase = createClient(
-  env.supabase.url || '',
-  env.supabase.anonKey || ''
-);
+
 
 // Initialize Stripe client
 export const stripePromise = env.stripe.publishableKey 
