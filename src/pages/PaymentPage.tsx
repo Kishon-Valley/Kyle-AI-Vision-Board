@@ -109,8 +109,10 @@ const PaymentForm = () => {
         // The backend will handle user creation if needed
       }
 
+      // Determine API base URL (allow overriding for production deployments)
+      const apiBase = import.meta.env.VITE_API_URL ?? '';
       // Then create the subscription
-      const response = await fetch('/api/create-subscription', {
+      const response = await fetch(`${apiBase}/api/create-subscription`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
