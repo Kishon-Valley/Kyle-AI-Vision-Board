@@ -103,8 +103,9 @@ app.post('/api/create-subscription', async (req, res) => {
     }
     console.log('[2/5] Supabase user check complete.');
       
-    if (!userData) {
-      console.log(`[3/5] No user found. Creating new Stripe customer for ${email}...`);
+    // If the user exists but doesn't have a Stripe ID, or if the user doesn't exist at all, create a new Stripe customer.
+    if (!userData || !userData.stripe_customer_id) {
+      console.log(`[3/5] No Stripe customer found. Creating new one for ${email}...`);
       customer = await stripe.customers.create({
         email: email,
         metadata: { userId },
