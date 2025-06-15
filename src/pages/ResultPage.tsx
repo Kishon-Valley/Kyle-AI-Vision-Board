@@ -283,30 +283,7 @@ const ResultPage = () => {
 
     if (!moodBoard) return;
     
-    // Check if this mood board is already saved for the user
-    try {
-      const { data: existing, error: dupError } = await supabase
-        .from('mood_boards')
-        .select('id')
-        .eq('image_url', moodBoard.image_url)
-        .limit(1)
-        .single();
 
-      if (dupError && dupError.code !== 'PGRST116') {
-        // Unknown error, log but continue to attempt save
-        console.error('Duplicate check failed:', dupError);
-      }
-
-      if (existing) {
-        toast({
-          title: 'Already Saved',
-          description: 'This mood board is already in your history.',
-        });
-        return;
-      }
-    } catch (err) {
-      console.error('Error during duplicate check:', err);
-    }
 
     try {
       // Save to Supabase
