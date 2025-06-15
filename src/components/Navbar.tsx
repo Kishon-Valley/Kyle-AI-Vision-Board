@@ -195,22 +195,28 @@ const Navbar = () => {
                   to="/" 
                   label="Home" 
                   currentPath={location.pathname} 
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={() => {
+                    navigate('/');
+                    setIsMobileMenuOpen(false);
+                  }}
                 />
                 <MobileNavLink 
                   to="#" 
                   label="Get Started" 
                   currentPath={location.pathname} 
                   onClick={() => {
-                    setIsMobileMenuOpen(false);
                     handleGetStarted();
+                    setIsMobileMenuOpen(false);
                   }}
                 />
                 <MobileNavLink 
                   to="/pricing" 
                   label="Pricing" 
                   currentPath={location.pathname} 
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={() => {
+                    navigate('/pricing');
+                    setIsMobileMenuOpen(false);
+                  }}
                 />
                 {isAuthenticated && (
                   <>
@@ -218,13 +224,19 @@ const Navbar = () => {
                   to="/history" 
                   label="History" 
                   currentPath={location.pathname} 
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={() => {
+                    navigate('/history');
+                    setIsMobileMenuOpen(false);
+                  }}
                 />
                   <MobileNavLink 
                     to="/profile" 
                     label="Profile" 
                     currentPath={location.pathname} 
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={() => {
+                      navigate('/profile');
+                      setIsMobileMenuOpen(false);
+                    }}
                   />
                   </>
                 )}
