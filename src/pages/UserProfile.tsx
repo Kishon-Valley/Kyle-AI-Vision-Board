@@ -85,8 +85,10 @@ const UserProfile = () => {
               .maybeSingle();
               
             if (!subscriptionError) {
+              console.log('Subscription check successful. Data:', subscriptionData);
               setAccountType(subscriptionData ? 'premium' : 'free');
             } else {
+              console.error('Error fetching subscription status:', subscriptionError);
               // If table doesn't exist or other error, default to free
               setAccountType('free');
             }
