@@ -77,11 +77,12 @@ const UserProfile = () => {
         try {
           // Check subscription status
           try {
+            // DEBUG: Fetch any subscription record for the user, regardless of status
             const { data: subscriptionData, error: subscriptionError } = await supabase
               .from('subscriptions')
-              .select('status')
+              .select('*') // Select all columns for debugging
               .eq('user_id', user.id)
-              .in('status', ['active', 'trialing'])
+              // .in('status', ['active', 'trialing']) // Temporarily disabled for debugging
               .maybeSingle();
               
             if (!subscriptionError) {
