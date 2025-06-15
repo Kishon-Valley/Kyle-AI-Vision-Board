@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,7 @@ const PaymentSuccessPage = () => {
   const [error, setError] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -38,7 +40,7 @@ const PaymentSuccessPage = () => {
         if (response.ok && data.success) {
           // Crucial step: Refresh the Supabase session to get the latest user data,
           // including the new subscription status.
-          await supabase.auth.refreshSession();
+          await refreshUser();
           
           setStatus('success');
           // Redirect after a short delay to allow the user to see the success message.

@@ -19,6 +19,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,7 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id,
       email,
       name: user_metadata?.full_name || user_metadata?.name || email?.split('@')[0],
-      avatar_url: user_metadata?.avatar_url
+      avatar_url: user_metadata?.avatar_url,
+      user_metadata: user_metadata,
     });
   };
 
@@ -115,8 +117,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('moodboards');
     setIsLoading(false);
+  };
+
+  const refreshUser = async () => {
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+    if (supabaseUser) {
+      setUserFromSupabase(supabaseUser);
+    }
   };
 
   const value = {
@@ -127,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     isAuthenticated: !!user,
     isLoading,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
