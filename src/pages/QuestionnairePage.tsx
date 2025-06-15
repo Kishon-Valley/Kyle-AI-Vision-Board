@@ -22,7 +22,7 @@ interface FormData {
 const QuestionnairePage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { hasSubscription, checkSubscription } = useSubscription();
+  const { hasSubscription, isLoading: isSubLoading, checkSubscription } = useSubscription();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
@@ -34,6 +34,10 @@ const QuestionnairePage = () => {
 
   // Check authentication and subscription status
   useEffect(() => {
+    if (isSubLoading) {
+      // Wait until subscription status has finished loading
+      return;
+    }
     if (!isAuthenticated) {
       toast({
         title: 'Sign Up Required',
@@ -52,7 +56,7 @@ const QuestionnairePage = () => {
       });
       navigate('/pricing');
     }
-  }, [isAuthenticated, hasSubscription, navigate, toast]);
+  }, [isAuthenticated, hasSubscription, isSubLoading, navigate, toast]);
 
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;
