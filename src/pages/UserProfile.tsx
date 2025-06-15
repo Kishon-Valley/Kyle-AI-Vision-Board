@@ -199,12 +199,19 @@ const UserProfile = () => {
         .from('profile-images')
         .getPublicUrl(filePath);
       
-      // Upsert profile with new avatar URL
-      const { error: updateError } = await supabase
+      // Update user's auth metadata first
+      const { error: userUpdateError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      if (userUpdateError) throw userUpdateError;
+
+      // Upsert profile with new avatar URL to keep it in sync
+      const { error: profileError } = await supabase
         .from('profiles')
         .upsert({ id: user.id, avatar_url: publicUrl, updated_at: new Date().toISOString() });
         
-      if (updateError) throw updateError;
+      if (profileError) throw profileError;
       
       // Update local state
       setAvatarUrl(publicUrl);
