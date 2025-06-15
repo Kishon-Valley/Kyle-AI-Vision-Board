@@ -289,8 +289,17 @@ const UserProfile = () => {
           throw new Error(`Subscription cancellation failed: ${subError instanceof Error ? subError.message : 'Unknown error'}`);
         }
       }
+
+      // Step 2: Delete the auth user using the Supabase function FIRST
+      const { error: functionError } = await supabase.functions.invoke('delete-user', {
+        body: { userId: user.id },
+      });
+
+      if (functionError) {
+        throw new Error(functionError.message || 'Failed to delete authentication data');
+      }
       
-      // Step 2: Delete user data from storage (if any)
+      // Step 3: Delete user data from storage (if any)
       if (avatarUrl) {
         try {
           const avatarPath = avatarUrl.split('/').pop();
@@ -300,59 +309,36 @@ const UserProfile = () => {
               .remove([avatarPath]);
             
             if (storageError) {
-              console.warn('Failed to delete profile image:', storageError);
-              // Continue with account deletion even if image deletion fails
+              console.warn('Failed to delete profile image during cleanup:', storageError);
             }
           }
         } catch (storageError) {
-          console.warn('Error deleting profile image:', storageError);
-          // Continue with account deletion even if image deletion fails
+          console.warn('Error deleting profile image during cleanup:', storageError);
         }
       }
       
-      // Step 3: Delete user data from database
+      // Step 4: Delete user data from the database
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('id', user.id);
       
       if (profileError) {
-        console.error('Profile deletion error:', profileError);
-        throw new Error(`Failed to delete profile data: ${profileError.message}`);
+        console.warn('Failed to delete profile data during cleanup:', profileError);
       }
       
-      // Step 4: Sign out first to clear the session
+      // Step 5: Sign out to clear the session and notify the user
+      await supabase.auth.signOut();
+      toast({
+        title: 'Account Deleted',
+        description: 'Your account and all associated data have been permanently deleted.',
+      });
 
-      
-      // Step 5: Delete the auth user using the Supabase function
-      try {
-        const { error: functionError } = await supabase.functions.invoke('delete-user', {
-          body: { userId: user.id },
-        });
+      navigate('/', { replace: true });
 
-        if (functionError) {
-          console.error('Error invoking delete-user function:', functionError);
-          throw new Error(functionError.message || 'Failed to delete authentication data');
-        }
-
-        // If we reach here, authentication deletion succeeded; now sign out to clear local session
-        await supabase.auth.signOut();
-        toast({
-          title: 'Account Deleted',
-          description: 'Your account and all associated data have been permanently deleted.',
-        });
-
-        // Use navigate for proper cleanup
-        navigate('/', { replace: true });
-
-      } catch (error) {
-        console.error('Auth user deletion error:', error);
-        throw new Error(`Failed to delete authentication data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
     } catch (error) {
       console.error('Error deleting account:', error);
       
-      // More specific error messages based on the error type
       if (error instanceof Error) {
         errorMessage = error.message || errorMessage;
       }
@@ -361,7 +347,7 @@ const UserProfile = () => {
         title: 'Error',
         description: errorMessage,
         variant: 'destructive',
-        duration: 10000, // Show for 10 seconds
+        duration: 10000,
       });
     } finally {
       setIsDeleting(false);
