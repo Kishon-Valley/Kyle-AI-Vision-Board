@@ -327,7 +327,7 @@ const UserProfile = () => {
       }
       
       // Step 4: Sign out first to clear the session
-      await supabase.auth.signOut();
+
       
       // Step 5: Delete the auth user using the admin API
       try {
@@ -344,7 +344,8 @@ const UserProfile = () => {
           throw new Error(errorData.error || 'Failed to delete authentication data');
         }
         
-        // If we reach here, all deletions were successful
+        // If we reach here, authentication deletion succeeded; now sign out to clear local session
+        await supabase.auth.signOut();
         toast({
           title: 'Account Deleted',
           description: 'Your account and all associated data have been permanently deleted.',
