@@ -221,6 +221,10 @@ const PaymentForm = () => {
             </CardContent>
             <CardFooter>
               <Button
+                onClick={() => {
+                  setBillingInterval(plan.id as 'month' | 'year');
+                  handleSubscribe();
+                }}
                 className={`w-full ${
                   billingInterval === plan.id 
                     ? 'bg-orange-500 hover:bg-orange-600' 
@@ -228,14 +232,20 @@ const PaymentForm = () => {
                 }`}
                 disabled={isLoading === 'processing'}
               >
-                {billingInterval === plan.id ? 'Selected' : 'Select Plan'}
+                {isLoading === 'processing' && billingInterval === plan.id ? (
+                  <span className="flex items-center justify-center">
+                    <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                    Processing...
+                  </span>
+                ) : (
+                  'Subscribe'
+                )}
               </Button>
             </CardFooter>
           </Card>
         ))}
       </div>
-      
-      <div className="mt-12 max-w-2xl mx-auto">
+      <div className="hidden">
         <h2 className="text-2xl font-bold text-center mb-6">Ready to get started?</h2>
         
         {error && (
