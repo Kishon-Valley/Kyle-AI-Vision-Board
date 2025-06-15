@@ -74,10 +74,15 @@ const UserProfile = () => {
   useEffect(() => {
     const fetchUserMetadata = async () => {
       if (user) {
+        // Set account type from user metadata
+        const status = user.user_metadata?.subscription_status;
+        const isPremium = status === 'active' || status === 'trialing';
+        setAccountType(isPremium ? 'premium' : 'free');
+
         try {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('bio, favorite_style, avatar_url, subscription_status')
+            .select('bio, favorite_style, avatar_url')
             .eq('id', user.id)
             .maybeSingle();
 
@@ -86,12 +91,6 @@ const UserProfile = () => {
           }
 
           if (profileData) {
-            // Set account type based on subscription status
-            const status = profileData.subscription_status;
-            const isPremium = status === 'active' || status === 'trialing';
-            setAccountType(isPremium ? 'premium' : 'free');
-
-            // Set form data
             setFormData({
               name: user.name || '',
               email: user.email || '',
@@ -104,7 +103,6 @@ const UserProfile = () => {
             }
           } else {
             // If no profile exists, set defaults
-            setAccountType('free');
             setFormData({
               name: user.name || '',
               email: user.email || '',
@@ -114,7 +112,6 @@ const UserProfile = () => {
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
-          setAccountType('free'); // Default to free on error
         }
       }
     };
