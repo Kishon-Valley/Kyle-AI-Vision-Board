@@ -248,7 +248,7 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
-                <span className="text-slate-300">{user?.name}</span>
+                <span className="text-slate-300">{user?.name?.split(' ')[0]}</span>
                 <button
                   onClick={logout}
                   className="p-2 rounded-md text-slate-300 hover:text-orange-400 focus:outline-none"
