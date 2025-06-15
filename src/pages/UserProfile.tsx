@@ -199,11 +199,10 @@ const UserProfile = () => {
         .from('profile-images')
         .getPublicUrl(filePath);
       
-      // Update profile with new avatar URL
+      // Upsert profile with new avatar URL
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id);
+        .upsert({ id: user.id, avatar_url: publicUrl, updated_at: new Date().toISOString() });
         
       if (updateError) throw updateError;
       
