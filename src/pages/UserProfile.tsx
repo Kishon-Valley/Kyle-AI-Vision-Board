@@ -82,7 +82,7 @@ const UserProfile = () => {
               .select('status')
               .eq('user_id', user.id)
               .in('status', ['active', 'trialing'])
-              .single();
+              .maybeSingle();
               
             if (!subscriptionError) {
               setAccountType(subscriptionData ? 'premium' : 'free');
@@ -99,7 +99,7 @@ const UserProfile = () => {
             .from('profiles')
             .select('bio, favorite_style, avatar_url')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
             
           if (data) {
             setFormData({
@@ -329,31 +329,27 @@ const UserProfile = () => {
       // Step 4: Sign out first to clear the session
 
       
-      // Step 5: Delete the auth user using the admin API
+      // Step 5: Delete the auth user using the Supabase function
       try {
-        const response = await fetch('/api/delete-account', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: user.id })
+        const { error: functionError } = await supabase.functions.invoke('delete-user', {
+          body: { userId: user.id },
         });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(errorData.error || 'Failed to delete authentication data');
+
+        if (functionError) {
+          console.error('Error invoking delete-user function:', functionError);
+          throw new Error(functionError.message || 'Failed to delete authentication data');
         }
-        
+
         // If we reach here, authentication deletion succeeded; now sign out to clear local session
         await supabase.auth.signOut();
         toast({
           title: 'Account Deleted',
           description: 'Your account and all associated data have been permanently deleted.',
         });
-        
+
         // Use navigate for proper cleanup
         navigate('/', { replace: true });
-        
+
       } catch (error) {
         console.error('Auth user deletion error:', error);
         throw new Error(`Failed to delete authentication data: ${error instanceof Error ? error.message : 'Unknown error'}`);
