@@ -74,6 +74,7 @@ const UserProfile = () => {
   useEffect(() => {
     const fetchUserMetadata = async () => {
       if (user) {
+
         // Set account type from user metadata
         const status = user.user_metadata?.subscription_status;
         const isPremium = status === 'active' || status === 'trialing';

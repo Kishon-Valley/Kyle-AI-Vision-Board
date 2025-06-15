@@ -8,6 +8,7 @@ interface User {
   email: string | undefined;
   name: string | undefined;
   avatar_url?: string;
+  user_metadata?: { [key: string]: any };
 }
 
 interface AuthContextType {
