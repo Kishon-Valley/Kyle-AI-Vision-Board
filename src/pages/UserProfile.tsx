@@ -75,58 +75,46 @@ const UserProfile = () => {
     const fetchUserMetadata = async () => {
       if (user) {
         try {
-          // Check subscription status
-          try {
-            // DEBUG: Fetch any subscription record for the user, regardless of status
-            const { data: subscriptionData, error: subscriptionError } = await supabase
-              .from('subscriptions')
-              .select('*') // Select all columns for debugging
-              .eq('user_id', user.id)
-              // .in('status', ['active', 'trialing']) // Temporarily disabled for debugging
-              .maybeSingle();
-              
-            if (!subscriptionError) {
-              console.log('Subscription check successful. Data:', subscriptionData);
-              setAccountType(subscriptionData ? 'premium' : 'free');
-            } else {
-              console.error('Error fetching subscription status:', subscriptionError);
-              // If table doesn't exist or other error, default to free
-              setAccountType('free');
-            }
-          } catch (error) {
-            console.warn('Error checking subscription status:', error);
-            setAccountType('free');
-          }
-          
-          const { data, error } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('bio, favorite_style, avatar_url')
+            .select('bio, favorite_style, avatar_url, subscription_status')
             .eq('id', user.id)
             .maybeSingle();
-            
-          if (data) {
+
+          if (profileError) {
+            throw profileError;
+          }
+
+          if (profileData) {
+            // Set account type based on subscription status
+            const status = profileData.subscription_status;
+            const isPremium = status === 'active' || status === 'trialing';
+            setAccountType(isPremium ? 'premium' : 'free');
+
+            // Set form data
             setFormData({
               name: user.name || '',
               email: user.email || '',
-              bio: data.bio || 'Interior design enthusiast who loves creating beautiful spaces',
-              favoriteStyle: data.favorite_style || 'Modern Minimalist'
+              bio: profileData.bio || 'Interior design enthusiast who loves creating beautiful spaces',
+              favoriteStyle: profileData.favorite_style || 'Modern Minimalist',
             });
-            
-            // Set avatar URL if available
-            if (data.avatar_url) {
-              setAvatarUrl(data.avatar_url);
+
+            if (profileData.avatar_url) {
+              setAvatarUrl(profileData.avatar_url);
             }
           } else {
-            // If no profile exists yet, set defaults
+            // If no profile exists, set defaults
+            setAccountType('free');
             setFormData({
               name: user.name || '',
               email: user.email || '',
               bio: 'Interior design enthusiast who loves creating beautiful spaces',
-              favoriteStyle: 'Modern Minimalist'
+              favoriteStyle: 'Modern Minimalist',
             });
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
+          setAccountType('free'); // Default to free on error
         }
       }
     };
