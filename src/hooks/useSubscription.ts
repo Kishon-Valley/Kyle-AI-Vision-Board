@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { supabase, checkUserSubscription } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useSubscription = () => {
@@ -19,21 +19,13 @@ export const useSubscription = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('subscriptions')
-          .select('status')
-          .eq('user_id', user.id)
-          .in('status', ['active', 'trialing'])
-          .maybeSingle();
+        const { hasSubscription: active, error } = await checkUserSubscription(user.id);
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           console.warn('Error checking subscription:', error);
         }
-        
-        // Only update state if we actually got data
-        if (data !== null) {
-          setHasSubscription(!!data);
-        }
+
+        setHasSubscription(active);
       } catch (error) {
         console.error('Error checking subscription:', error);
         setHasSubscription(false);
