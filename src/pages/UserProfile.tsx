@@ -318,13 +318,16 @@ const UserProfile = () => {
       // Step 2: Delete all of the user's moodboards first
       await deleteAllUserMoodBoards(user.id);
 
-      // Step 3: Delete the auth user using the Supabase function
-      const { error: functionError } = await supabase.functions.invoke('delete-user', {
-        body: { userId: user.id },
+      // Step 3: Delete the auth user using the API endpoint
+      const deleteUserResponse = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
       });
 
-      if (functionError) {
-        throw new Error(functionError.message || 'Failed to delete authentication data');
+      if (!deleteUserResponse.ok) {
+        const errorData = await deleteUserResponse.json();
+        throw new Error(errorData.error || 'Failed to delete user');
       }
       
       // Step 3: Delete user data from storage (if any)

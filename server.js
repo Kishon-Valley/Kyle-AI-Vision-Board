@@ -368,6 +368,28 @@ app.post('/api/cancel-subscription', async (req, res) => {
   }
 });
 
+// Endpoint to delete a user
+app.post('/api/delete-user', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'User ID is required.' });
+    }
+
+    // Use the Supabase Admin client to delete the user
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+
+    res.json({ success: true, message: 'User deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Simple endpoint to check if the server is running
 app.get('/', (req, res) => {
   res.send('Vision Board AI API is running');
