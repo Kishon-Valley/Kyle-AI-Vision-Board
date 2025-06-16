@@ -8,7 +8,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
 // Make sure to use the correct environment variable name for Vite
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY, {
+  locale: 'en'
+});
 
 type BillingInterval = 'month' | 'year';
 
