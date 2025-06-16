@@ -315,10 +315,44 @@ const UserProfile = () => {
         }
       }
 
-      // Step 2: Delete all of the user's moodboards first
+      // Step 2: Delete all user-related data from storage and database tables
       await deleteAllUserMoodBoards(user.id);
 
-      // Step 3: Delete the auth user using the API endpoint
+      if (avatarUrl) {
+        try {
+          const avatarPath = avatarUrl.split('/').pop();
+          if (avatarPath) {
+            const { error: storageError } = await supabase.storage
+              .from('profile-images')
+              .remove([avatarPath]);
+            if (storageError) {
+              console.warn('Failed to delete profile image during cleanup:', storageError);
+            }
+          }
+        } catch (storageError) {
+          console.warn('Error deleting profile image during cleanup:', storageError);
+        }
+      }
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+      
+      if (profileError) {
+        console.warn('Failed to delete profile data during cleanup:', profileError);
+      }
+
+      const { error: userTableError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', user.id);
+
+      if (userTableError) {
+        console.warn('Failed to delete user data from users table during cleanup:', userTableError);
+      }
+
+      // Step 3: After cleanup, delete the auth user via the API endpoint
       const deleteUserResponse = await fetch('/api/delete-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -330,35 +364,7 @@ const UserProfile = () => {
         throw new Error(errorData.error || 'Failed to delete user');
       }
       
-      // Step 3: Delete user data from storage (if any)
-      if (avatarUrl) {
-        try {
-          const avatarPath = avatarUrl.split('/').pop();
-          if (avatarPath) {
-            const { error: storageError } = await supabase.storage
-              .from('profile-images')
-              .remove([avatarPath]);
-            
-            if (storageError) {
-              console.warn('Failed to delete profile image during cleanup:', storageError);
-            }
-          }
-        } catch (storageError) {
-          console.warn('Error deleting profile image during cleanup:', storageError);
-        }
-      }
-      
-      // Step 4: Delete user data from the database
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id);
-      
-      if (profileError) {
-        console.warn('Failed to delete profile data during cleanup:', profileError);
-      }
-      
-      // Step 5: Sign out to clear the session and notify the user
+      // Step 4: Sign out to clear the session and notify the user
       await supabase.auth.signOut();
       toast({
         title: 'Account Deleted',
