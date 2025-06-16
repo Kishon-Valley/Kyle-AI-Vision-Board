@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, checkUserSubscription } from '../lib/supabase';
 import { getUserMoodBoards, deleteAllUserMoodBoards } from '../lib/moodboards';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -125,6 +125,23 @@ const UserProfile = () => {
     if (user) {
       fetchUserStats();
     }
+  }, [user]);
+
+  // Fetch subscription status from DB to keep account type accurate
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      if (!user) return;
+      try {
+        const { hasSubscription, error } = await checkUserSubscription(user.id);
+        if (error) {
+          console.error('Subscription status error:', error);
+        }
+        setAccountType(hasSubscription ? 'premium' : 'free');
+      } catch (err) {
+        console.error('Error fetching subscription status:', err);
+      }
+    };
+    fetchSubscriptionStatus();
   }, [user]);
 
   const handleSave = async () => {
