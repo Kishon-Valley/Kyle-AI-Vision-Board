@@ -336,6 +336,38 @@ async function handlePaymentFailed(invoice) {
   }
 }
 
+// Endpoint to cancel a subscription
+app.post('/api/cancel-subscription', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'User ID is required.' });
+    }
+
+    // Get user's subscription ID from Supabase
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('subscription_id')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userData || !userData.subscription_id) {
+      throw new Error('Could not find a subscription for this user.');
+    }
+
+    // Cancel the subscription with Stripe
+    const canceledSubscription = await stripe.subscriptions.cancel(userData.subscription_id);
+
+    // Update the user's subscription status in Supabase
+    await handleSubscriptionUpdated(canceledSubscription);
+
+    res.json({ success: true, message: 'Subscription canceled successfully.' });
+  } catch (error) {
+    console.error('Error canceling subscription:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Simple endpoint to check if the server is running
 app.get('/', (req, res) => {
   res.send('Vision Board AI API is running');

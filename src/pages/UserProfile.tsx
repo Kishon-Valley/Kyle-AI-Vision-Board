@@ -296,11 +296,19 @@ const UserProfile = () => {
       // Step 1: Cancel any active subscription first
       if (accountType === 'premium') {
         try {
-          const { error: subError } = await supabase.functions.invoke('cancel-subscription');
-          if (subError) {
-            console.error('Subscription cancellation error:', subError);
-            throw new Error(`Failed to cancel subscription: ${subError.message}`);
-          }
+          const response = await fetch('/api/cancel-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.id }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to cancel subscription');
+        }
+          
         } catch (subError) {
           console.error('Error in subscription cancellation:', subError);
           throw new Error(`Subscription cancellation failed: ${subError instanceof Error ? subError.message : 'Unknown error'}`);
