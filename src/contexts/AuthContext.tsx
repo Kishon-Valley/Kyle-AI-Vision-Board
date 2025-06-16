@@ -121,7 +121,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshUser = async () => {
-    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+    // First, refresh the session to get the latest user data from the server
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      console.error('Error refreshing session:', refreshError.message);
+      // Don't proceed if session refresh fails
+      return;
+    }
+
+    // After refreshing, getUser() will return the updated user from the new session
+    const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser();
+    if (getUserError) {
+      console.error('Error getting user after refresh:', getUserError.message);
+      return;
+    }
+
     if (supabaseUser) {
       setUserFromSupabase(supabaseUser);
     }
