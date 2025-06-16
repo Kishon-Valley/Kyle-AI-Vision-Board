@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { getUserMoodBoards } from '../lib/moodboards';
+import { getUserMoodBoards, deleteAllUserMoodBoards } from '../lib/moodboards';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -290,7 +290,10 @@ const UserProfile = () => {
         }
       }
 
-      // Step 2: Delete the auth user using the Supabase function FIRST
+      // Step 2: Delete all of the user's moodboards first
+      await deleteAllUserMoodBoards(user.id);
+
+      // Step 3: Delete the auth user using the Supabase function
       const { error: functionError } = await supabase.functions.invoke('delete-user', {
         body: { userId: user.id },
       });
