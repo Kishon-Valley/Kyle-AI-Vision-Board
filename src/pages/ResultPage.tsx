@@ -287,11 +287,6 @@ const ResultPage = () => {
 
     try {
       // Save to Supabase
-      const savingToast = toast({
-        title: "Saving...",
-        description: "Saving your mood board to your account.",
-      });
-      
       await saveMoodBoard({
         image_url: moodBoard.image_url,
         description: moodBoard.description,
@@ -311,8 +306,8 @@ const ResultPage = () => {
       
       setIsSaved(true);
       toast({
-        title: "Mood Board Saved!",
-        description: "Added to your personal history.",
+        title: "✨ Mood Board Saved Successfully!",
+        description: "Your new mood board has been saved to your personal history.",
       });
     } catch (error) {
       console.error('Error saving mood board:', error);
