@@ -34,9 +34,7 @@ export async function POST(request: Request) {
       },
     });
 
-    const { error } = await adminClient.auth.admin.deleteUser(userId, {
-      hardDelete: true, // remove auth + linked identities permanently
-    });
+    const { error } = await adminClient.auth.admin.deleteUser(userId, true);
 
     if (error) {
       console.error('Error deleting user via admin API:', error);
