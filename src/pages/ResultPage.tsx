@@ -26,6 +26,7 @@ const ResultPage = () => {
   const [moodBoard, setMoodBoard] = useState<MoodBoard | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [regenTrigger, setRegenTrigger] = useState(0);
 
   useEffect(() => {
     const generateMoodBoard = async () => {
@@ -169,7 +170,7 @@ const ResultPage = () => {
     };
     
     generateMoodBoard();
-  }, [toast]);
+  }, [toast, regenTrigger]);
 
   const handleDownload = async () => {
     if (!moodBoard) return;
@@ -323,8 +324,9 @@ const ResultPage = () => {
   const handleRegenerate = () => {
     setIsLoading(true);
     setIsSaved(false);
-    // Re-run the useEffect by forcing a component re-render
     setMoodBoard(null);
+    // Trigger re-generation
+    setRegenTrigger(prev => prev + 1);
   };
   
   if (isLoading || !moodBoard) {
