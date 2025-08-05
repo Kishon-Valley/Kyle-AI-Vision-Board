@@ -11,7 +11,7 @@ const Footer = () => {
             <div className="flex items-center justify-center space-x-2 mb-3">
               <img src="/kyle%20logo.jpg" alt="Moodboard Generator Logo" className="h-10 w-10 rounded-full object-cover" />
               <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-                 Moodboard GeneratorX
+                 Moodboard Generator
               </span>
             </div>
             <p className="text-slate-400 mb-4 max-w-md mx-auto">
