@@ -1,6 +1,6 @@
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
@@ -70,6 +70,53 @@ const CheckoutForm: React.FC<StripePaymentButtonProps> = ({ billingInterval }) =
   );
 };
 
+const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({ billingInterval }) => {
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    if (!user || !isAuthenticated) return;
+    const fetchClientSecret = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ billingInterval, userId: user.id }),
+        });
+        const data = await res.json();
+        if (res.ok && data.clientSecret) {
+          setClientSecret(data.clientSecret);
+        } else {
+          toast.error(data.error || 'Failed to initialize payment');
+        }
+      } catch (err) {
+        toast.error('Failed to initialize payment');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClientSecret();
+  }, [billingInterval, user, isAuthenticated]);
 
-export default CheckoutForm;
+  if (authLoading) {
+    return <Button disabled>Loading user...</Button>;
+  }
+  if (!isAuthenticated) {
+    return <Button disabled>Please sign in to subscribe</Button>;
+  }
+  if (loading) {
+    return <Button disabled>Loading payment...</Button>;
+  }
+  if (!clientSecret) {
+    return <Button disabled>Unable to start payment</Button>;
+  }
+  return (
+    <Elements stripe={stripePromise} options={{ clientSecret }}>
+      <CheckoutForm billingInterval={billingInterval} />
+    </Elements>
+  );
+};
+
+export default StripePaymentButton;

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Check, Loader2 } from 'lucide-react';
+import StripePaymentButton from '@/components/StripePaymentButton';
 
 const getPricingPlans = () => [
   {
@@ -175,19 +176,8 @@ const PaymentPage = () => {
               </ul>
             </CardContent>
             <CardFooter>
-              <Button
-                onClick={() => {
-                  // For now, just navigate to questionnaire
-                  navigate('/questionnaire');
-                }}
-                className={`w-full ${
-                  billingInterval === plan.id 
-                    ? 'bg-orange-500 hover:bg-orange-600' 
-                    : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900'
-                }`}
-              >
-                Subscribe
-              </Button>
+              {/* Replace the Subscribe button with the Stripe payment button for non-subscribed users */}
+              <StripePaymentButton billingInterval={plan.id as 'month' | 'year'} />
             </CardFooter>
           </Card>
         ))}
