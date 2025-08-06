@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { supabase } from '../lib/supabase';
 import { MoodBoard } from '../lib/moodboards';
 
@@ -86,9 +87,11 @@ const SharePage = () => {
             <h1 className="text-3xl font-bold">
               {moodBoard.style} {moodBoard.room_type} Design
             </h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              {moodBoard.description}
-            </p>
+            <div className="prose dark:prose-invert max-w-none">
+              <ReactMarkdown>
+                {moodBoard.description}
+              </ReactMarkdown>
+            </div>
             <div className="flex flex-wrap gap-2">
               {moodBoard.color_palette?.map((color, index) => (
                 <span

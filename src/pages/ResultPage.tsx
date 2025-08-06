@@ -26,6 +26,7 @@ const ResultPage = () => {
   const [moodBoard, setMoodBoard] = useState<MoodBoard | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [regenTrigger, setRegenTrigger] = useState(0);
 
   useEffect(() => {
     const generateMoodBoard = async () => {
@@ -169,7 +170,7 @@ const ResultPage = () => {
     };
     
     generateMoodBoard();
-  }, [toast]);
+  }, [toast, regenTrigger]);
 
   const handleDownload = async () => {
     if (!moodBoard) return;
@@ -283,38 +284,10 @@ const ResultPage = () => {
 
     if (!moodBoard) return;
     
-    // Check if this mood board is already saved for the user
-    try {
-      const { data: existing, error: dupError } = await supabase
-        .from('mood_boards')
-        .select('id')
-        .eq('image_url', moodBoard.image_url)
-        .limit(1)
-        .single();
 
-      if (dupError && dupError.code !== 'PGRST116') {
-        // Unknown error, log but continue to attempt save
-        console.error('Duplicate check failed:', dupError);
-      }
-
-      if (existing) {
-        toast({
-          title: 'Already Saved',
-          description: 'This mood board is already in your history.',
-        });
-        return;
-      }
-    } catch (err) {
-      console.error('Error during duplicate check:', err);
-    }
 
     try {
       // Save to Supabase
-      const savingToast = toast({
-        title: "Saving...",
-        description: "Saving your mood board to your account.",
-      });
-      
       await saveMoodBoard({
         image_url: moodBoard.image_url,
         description: moodBoard.description,
@@ -334,8 +307,8 @@ const ResultPage = () => {
       
       setIsSaved(true);
       toast({
-        title: "Mood Board Saved!",
-        description: "Added to your personal history.",
+        title: "✨ Mood Board Saved Successfully!",
+        description: "Your new mood board has been saved to your personal history.",
       });
     } catch (error) {
       console.error('Error saving mood board:', error);
@@ -351,8 +324,9 @@ const ResultPage = () => {
   const handleRegenerate = () => {
     setIsLoading(true);
     setIsSaved(false);
-    // Re-run the useEffect by forcing a component re-render
     setMoodBoard(null);
+    // Trigger re-generation
+    setRegenTrigger(prev => prev + 1);
   };
   
   if (isLoading || !moodBoard) {

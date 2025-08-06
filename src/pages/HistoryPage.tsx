@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Share, Trash2, Plus, Calendar, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Download, Share, Trash2, Plus, Calendar, RefreshCw, CheckCircle2, Loader2 } from 'lucide-react';
 import { getUserMoodBoards, deleteMoodBoard, updateMoodBoardStatus, MoodBoard as MoodBoardType } from '../lib/moodboards';
 import {
   Select,
@@ -20,15 +21,44 @@ type MoodBoard = MoodBoardType & {
 };
 
 const HistoryPage = () => {
-  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { hasSubscription, isLoading: subLoading } = useSubscription();
   const { toast } = useToast();
   const [moodBoards, setMoodBoards] = useState<MoodBoard[]>([]);
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Check authentication and subscription status
+  useEffect(() => {
+    if (authLoading || subLoading) {
+      // Wait until both auth and subscription status have finished loading
+      return;
+    }
+    
+    if (!isAuthenticated) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to view your mood board history.',
+        variant: 'destructive'
+      });
+      navigate('/');
+      return;
+    }
+
+    if (!hasSubscription) {
+      toast({
+        title: 'Subscription Required',
+        description: 'Please subscribe to access your mood board history.',
+        variant: 'destructive'
+      });
+      navigate('/pricing');
+      return;
+    }
+  }, [isAuthenticated, hasSubscription, authLoading, subLoading, navigate, toast]);
+
   const fetchMoodBoards = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !hasSubscription) return;
     
     try {
       setIsLoading(true);
@@ -58,8 +88,10 @@ const HistoryPage = () => {
   };
 
   useEffect(() => {
-    fetchMoodBoards();
-  }, [isAuthenticated]);
+    if (isAuthenticated && hasSubscription) {
+      fetchMoodBoards();
+    }
+  }, [isAuthenticated, hasSubscription]);
 
   const handleDownload = async (moodBoard: MoodBoard) => {
     try {

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { AuthError, AuthResponse, Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -8,6 +7,7 @@ interface User {
   email: string | undefined;
   name: string | undefined;
   avatar_url?: string;
+  user_metadata?: { [key: string]: any };
 }
 
 interface AuthContextType {
@@ -18,6 +18,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,10 +54,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getSession();
     
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setUserFromSupabase(session.user);
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        const supabaseUser = session?.user ?? null;
+        if (supabaseUser) {
+          setUserFromSupabase(supabaseUser);
         } else {
           setUser(null);
         }
@@ -65,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     
     return () => {
-      subscription.unsubscribe();
+      authListener?.subscription?.unsubscribe();
     };
   }, []);
   
@@ -77,7 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id,
       email,
       name: user_metadata?.full_name || user_metadata?.name || email?.split('@')[0],
-      avatar_url: user_metadata?.avatar_url
+      avatar_url: user_metadata?.avatar_url,
+      user_metadata: user_metadata,
     });
   };
 
@@ -114,8 +117,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('moodboards');
     setIsLoading(false);
+  };
+
+  const refreshUser = async () => {
+    // First, refresh the session to get the latest user data from the server
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      console.error('Error refreshing session:', refreshError.message);
+      // Don't proceed if session refresh fails
+      return;
+    }
+
+    // After refreshing, getUser() will return the updated user from the new session
+    const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser();
+    if (getUserError) {
+      console.error('Error getting user after refresh:', getUserError.message);
+      return;
+    }
+
+    if (supabaseUser) {
+      setUserFromSupabase(supabaseUser);
+    }
   };
 
   const value = {
@@ -126,6 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     isAuthenticated: !!user,
     isLoading,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

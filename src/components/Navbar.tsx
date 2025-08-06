@@ -1,26 +1,37 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '@/hooks/use-toast';
 import { User, LogOut, Calendar, Sun, Moon, Loader2, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
   const { user, login, signUpWithEmail, loginWithGoogle, logout, isAuthenticated, isLoading } = useAuth();
+  const { hasSubscription, isLoading: subLoading } = useSubscription();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate('/questionnaire');
+    } else {
+      setIsLoginOpen(true);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +48,7 @@ const Navbar = () => {
         setIsLoginOpen(false);
         setEmail('');
         setPassword('');
+        navigate('/questionnaire');
         toast({
           title: "Login successful",
           description: "Welcome back!",
@@ -79,6 +91,7 @@ const Navbar = () => {
         setEmail('');
         setPassword('');
         setConfirmPassword('');
+        navigate('/questionnaire');
         toast({
           title: "Sign up successful",
           description: "Please check your email to verify your account",
@@ -108,6 +121,32 @@ const Navbar = () => {
       });
     }
   };
+
+  const NavLink = ({ to, label, currentPath, onClick }: { to: string; label: string; currentPath: string; onClick?: () => void }) => (
+    <button
+      onClick={onClick || (() => navigate(to))}
+      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+        currentPath === to
+          ? 'text-orange-400'
+          : 'text-slate-300 hover:text-orange-400'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  const MobileNavLink = ({ to, label, currentPath, onClick }: { to: string; label: string; currentPath: string; onClick?: () => void }) => (
+    <button
+      onClick={onClick || (() => navigate(to))}
+      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+        currentPath === to
+          ? 'text-orange-400'
+          : 'text-slate-300 hover:text-orange-400'
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <nav className="bg-slate-800/90 dark:bg-slate-950/90 backdrop-blur-lg border-b border-slate-700/50 dark:border-slate-800/50 sticky top-0 z-50">
@@ -140,18 +179,15 @@ const Navbar = () => {
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
             <NavLink to="/" label="Home" currentPath={location.pathname} />
-            <NavLink to="/questionnaire" label="Create" currentPath={location.pathname} />
+            <NavLink to="#" label="Get Started" currentPath={location.pathname} onClick={handleGetStarted} />
+            <NavLink to="/pricing" label="Pricing" currentPath={location.pathname} />
             {isAuthenticated && (
-              <NavLink 
-                to="/history" 
-                label={
-                  <span className="flex items-center space-x-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>My Boards</span>
-                  </span>
-                } 
-                currentPath={location.pathname} 
-              />
+              <>
+                {hasSubscription && (
+                  <NavLink to="/history" label="History" currentPath={location.pathname} />
+                )}
+                <NavLink to="/profile" label="Profile" currentPath={location.pathname} />
+              </>
             )}
           </div>
 
@@ -163,26 +199,52 @@ const Navbar = () => {
                   to="/" 
                   label="Home" 
                   currentPath={location.pathname} 
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={() => {
+                    navigate('/');
+                    setIsMobileMenuOpen(false);
+                  }}
                 />
                 <MobileNavLink 
-                  to="/questionnaire" 
-                  label="Create" 
+                  to="#" 
+                  label="Get Started" 
                   currentPath={location.pathname} 
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={() => {
+                    handleGetStarted();
+                    setIsMobileMenuOpen(false);
+                  }}
+                />
+                <MobileNavLink 
+                  to="/pricing" 
+                  label="Pricing" 
+                  currentPath={location.pathname} 
+                  onClick={() => {
+                    navigate('/pricing');
+                    setIsMobileMenuOpen(false);
+                  }}
                 />
                 {isAuthenticated && (
-                  <MobileNavLink 
-                    to="/history" 
-                    label={
-                      <span className="flex items-center space-x-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>My Boards</span>
-                      </span>
-                    } 
-                    currentPath={location.pathname} 
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  />
+                  <>
+                    {hasSubscription && (
+                      <MobileNavLink 
+                        to="/history" 
+                        label="History" 
+                        currentPath={location.pathname} 
+                        onClick={() => {
+                          navigate('/history');
+                          setIsMobileMenuOpen(false);
+                        }}
+                      />
+                    )}
+                    <MobileNavLink 
+                      to="/profile" 
+                      label="Profile" 
+                      currentPath={location.pathname} 
+                      onClick={() => {
+                        navigate('/profile');
+                        setIsMobileMenuOpen(false);
+                      }}
+                    />
+                  </>
                 )}
               </div>
             </div>
@@ -190,39 +252,28 @@ const Navbar = () => {
 
           {/* Theme Toggle and Auth Section */}
           <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={toggleTheme}
-              className="text-slate-300 hover:text-orange-400 hover:bg-slate-700/50"
+              className="p-2 rounded-md text-slate-300 hover:text-orange-400 focus:outline-none"
+              aria-label="Toggle theme"
             >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </Button>
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </button>
 
             {isAuthenticated ? (
-              <div className="flex items-center space-x-3">
-                <Link to="/profile" className="flex items-center space-x-2 text-slate-300 hover:text-orange-400 transition-colors">
-                  {user?.avatar_url ? (
-                    <img 
-                      src={user.avatar_url} 
-                      alt={user?.name || 'User'} 
-                      className="w-6 h-6 rounded-full"
-                    />
-                  ) : (
-                    <User className="w-4 h-4" />
-                  )}
-                  <span className="text-sm">{user?.name}</span>
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="sm"
+              <div className="flex items-center space-x-4">
+                <span className="text-slate-300">{user?.name?.split(' ')[0]}</span>
+                <button
                   onClick={logout}
-                  disabled={isLoading}
-                  className="text-slate-300 hover:text-red-400 hover:bg-slate-700/50"
+                  className="p-2 rounded-md text-slate-300 hover:text-orange-400 focus:outline-none"
+                  aria-label="Logout"
                 >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
-                </Button>
+                  <LogOut className="h-5 w-5" />
+                </button>
               </div>
             ) : (
               <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
@@ -233,9 +284,9 @@ const Navbar = () => {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Welcome  AI-powered Moodboard Generator</DialogTitle>
+                    <DialogTitle>Welcome to AI-powered Moodboard Generator</DialogTitle>
                     <DialogDescription>
-                      Sign in to save your mood boards and access your history.
+                      Sign in to create your personalized mood board.
                     </DialogDescription>
                   </DialogHeader>
                   
@@ -339,9 +390,9 @@ const Navbar = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="confirm-password">Confirm Password</Label>
+                          <Label htmlFor="signup-confirm-password">Confirm Password</Label>
                           <Input
-                            id="confirm-password"
+                            id="signup-confirm-password"
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -365,30 +416,6 @@ const Navbar = () => {
                           )}
                         </Button>
                       </form>
-                      
-                      <div className="relative my-4">
-                        <div className="absolute inset-0 flex items-center">
-                          <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                          <span className="bg-background px-2 text-muted-foreground">
-                            Or continue with
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        className="w-full flex items-center justify-center gap-2"
-                        onClick={handleGoogleLogin}
-                        disabled={isSubmitting}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.792 4.792 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.702 3.702 0 0 0 1.599-2.431H8v-3.08h7.545z" fill="#4285F4"/>
-                        </svg>
-                        Google
-                      </Button>
                     </TabsContent>
                   </Tabs>
                 </DialogContent>
@@ -400,34 +427,5 @@ const Navbar = () => {
     </nav>
   );
 };
-
-// Reusable NavLink component for desktop
-const NavLink = ({ to, label, currentPath }) => (
-  <Link
-    to={to}
-    className={`transition-colors ${
-      currentPath === to 
-        ? 'text-orange-400 font-medium' 
-        : 'text-slate-300 hover:text-orange-400'
-    }`}
-  >
-    {label}
-  </Link>
-);
-
-// Mobile NavLink component with different styling
-const MobileNavLink = ({ to, label, currentPath, onClick }) => (
-  <Link
-    to={to}
-    onClick={onClick}
-    className={`block px-3 py-2 rounded-md text-base font-medium ${
-      currentPath === to
-        ? 'bg-slate-700/50 text-orange-400'
-        : 'text-slate-300 hover:bg-slate-700/50 hover:text-orange-400'
-    }`}
-  >
-    {label}
-  </Link>
-);
 
 export default Navbar;

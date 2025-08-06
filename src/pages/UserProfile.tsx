@@ -1,20 +1,21 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
-import { getUserMoodBoards } from '../lib/moodboards';
+import { supabase, checkUserSubscription } from '../lib/supabase';
+import { getUserMoodBoards, deleteAllUserMoodBoards } from '../lib/moodboards';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Palette, Camera, Sparkles, Loader2, X } from 'lucide-react';
+import { User, Mail, Palette, Camera, Sparkles, Loader2, X, AlertTriangle, Trash2 } from 'lucide-react';
 
 const UserProfile = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [accountType, setAccountType] = useState<'free' | 'premium'>('free');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -24,6 +25,8 @@ const UserProfile = () => {
   });
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Stats for Design Journey section
@@ -33,11 +36,6 @@ const UserProfile = () => {
     completedProjectsCount: 0
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
-  
-  // Redirect if not authenticated
-  if (!isLoading && !isAuthenticated) {
-    return <Navigate to="/" />;
-  }
   
   // Function to toggle edit mode
   const toggleEditMode = () => {
@@ -76,32 +74,41 @@ const UserProfile = () => {
   useEffect(() => {
     const fetchUserMetadata = async () => {
       if (user) {
+
+        // Set account type from user metadata
+        const status = user.user_metadata?.subscription_status;
+        const isPremium = status === 'active' || status === 'trialing';
+        setAccountType(isPremium ? 'premium' : 'free');
+
         try {
-          const { data, error } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('bio, favorite_style, avatar_url')
             .eq('id', user.id)
-            .single();
-            
-          if (data) {
+            .maybeSingle();
+
+          if (profileError) {
+            throw profileError;
+          }
+
+          if (profileData) {
             setFormData({
               name: user.name || '',
               email: user.email || '',
-              bio: data.bio || 'Interior design enthusiast who loves creating beautiful spaces',
-              favoriteStyle: data.favorite_style || 'Modern Minimalist'
+              bio: profileData.bio || 'Interior design enthusiast who loves creating beautiful spaces',
+              favoriteStyle: profileData.favorite_style || 'Modern Minimalist',
             });
-            
-            // Set avatar URL if available
-            if (data.avatar_url) {
-              setAvatarUrl(data.avatar_url);
+
+            if (profileData.avatar_url) {
+              setAvatarUrl(profileData.avatar_url);
             }
           } else {
-            // If no profile exists yet, set defaults
+            // If no profile exists, set defaults
             setFormData({
               name: user.name || '',
               email: user.email || '',
               bio: 'Interior design enthusiast who loves creating beautiful spaces',
-              favoriteStyle: 'Modern Minimalist'
+              favoriteStyle: 'Modern Minimalist',
             });
           }
         } catch (error) {
@@ -118,6 +125,23 @@ const UserProfile = () => {
     if (user) {
       fetchUserStats();
     }
+  }, [user]);
+
+  // Fetch subscription status from DB to keep account type accurate
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      if (!user) return;
+      try {
+        const { hasSubscription, error } = await checkUserSubscription(user.id);
+        if (error) {
+          console.error('Subscription status error:', error);
+        }
+        setAccountType(hasSubscription ? 'premium' : 'free');
+      } catch (err) {
+        console.error('Error fetching subscription status:', err);
+      }
+    };
+    fetchSubscriptionStatus();
   }, [user]);
 
   const handleSave = async () => {
@@ -192,13 +216,19 @@ const UserProfile = () => {
         .from('profile-images')
         .getPublicUrl(filePath);
       
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
+      // Update user's auth metadata first
+      const { error: userUpdateError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      if (userUpdateError) throw userUpdateError;
+
+      // Upsert profile with new avatar URL to keep it in sync
+      const { error: profileError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id);
+        .upsert({ id: user.id, avatar_url: publicUrl, updated_at: new Date().toISOString() });
         
-      if (updateError) throw updateError;
+      if (profileError) throw profileError;
       
       // Update local state
       setAvatarUrl(publicUrl);
@@ -254,6 +284,175 @@ const UserProfile = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user || !window.confirm('Are you absolutely sure? This will permanently delete your account and all associated data. This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    let errorMessage = 'Failed to delete account. Please try again or contact support.';
+    
+    try {
+      // Step 1: Cancel any active subscription first
+      if (accountType === 'premium') {
+        try {
+          const response = await fetch('/api/cancel-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.id }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to cancel subscription');
+        }
+          
+        } catch (subError) {
+          console.error('Error in subscription cancellation:', subError);
+          throw new Error(`Subscription cancellation failed: ${subError instanceof Error ? subError.message : 'Unknown error'}`);
+        }
+      }
+
+      // Step 2: Delete all user-related data from storage and database tables
+      await deleteAllUserMoodBoards(user.id);
+
+      if (avatarUrl) {
+        try {
+          const avatarPath = avatarUrl.split('/').pop();
+          if (avatarPath) {
+            const { error: storageError } = await supabase.storage
+              .from('profile-images')
+              .remove([avatarPath]);
+            if (storageError) {
+              console.warn('Failed to delete profile image during cleanup:', storageError);
+            }
+          }
+        } catch (storageError) {
+          console.warn('Error deleting profile image during cleanup:', storageError);
+        }
+      }
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+      
+      if (profileError) {
+        console.warn('Failed to delete profile data during cleanup:', profileError);
+      }
+
+      const { error: userTableError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', user.id);
+
+      if (userTableError) {
+        console.warn('Failed to delete user data from users table during cleanup:', userTableError);
+      }
+
+      // Step 3: After cleanup, delete the auth user via the API endpoint
+      const deleteUserResponse = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!deleteUserResponse.ok) {
+        const errorData = await deleteUserResponse.json();
+        throw new Error(errorData.error || 'Failed to delete user');
+      }
+      
+      // Step 4: Sign out to clear the session and notify the user
+      await supabase.auth.signOut();
+      toast({
+        title: 'Account Deleted',
+        description: 'Your account and all associated data have been permanently deleted.',
+      });
+
+      navigate('/', { replace: true });
+
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      
+      if (error instanceof Error) {
+        errorMessage = error.message || errorMessage;
+      }
+      
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 10000,
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const DeleteAccountConfirmation = () => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full animate-scale-in">
+        <div className="flex items-center justify-center mb-4">
+          <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
+            <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+          </div>
+        </div>
+        <h3 className="text-lg font-semibold text-center mb-2">Delete Your Account</h3>
+        <div className="space-y-4 mb-6">
+          <p className="text-sm text-slate-700 dark:text-slate-200 text-center">
+            This action is permanent and cannot be undone.
+          </p>
+          <p className="text-sm text-slate-700 dark:text-slate-200 font-medium text-center">
+            All your data, including mood boards and preferences, will be permanently removed.
+          </p>
+          {accountType === 'premium' && (
+            <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r">
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                <AlertTriangle className="inline-block w-4 h-4 mr-1 -mt-1" />
+                Important: Your active subscription will be canceled (no refunds will be issued).
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteConfirm(false)}
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteAccount}
+            disabled={isDeleting}
+            className="flex items-center justify-center w-full"
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete My Account
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Redirect after hooks are set up to maintain consistent hook order
+  if (!isLoading && !isAuthenticated) {
+    return <Navigate to="/" />;
+  }
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated Background */}
@@ -283,8 +482,30 @@ const UserProfile = () => {
             <div className="lg:col-span-1">
               <Card className="backdrop-blur-md bg-white/30 dark:bg-slate-900/50 border-white/20 dark:border-slate-700/50 shadow-2xl animate-scale-in">
                 <CardContent className="p-8 text-center">
+                  {/* Account Type Badge */}
+                  <div className="mb-2 text-center">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      accountType === 'premium' 
+                        ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' 
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                    }`}>
+                      {accountType === 'premium' ? (
+                        <>
+                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          Premium Account
+                        </>
+                      ) : 'Free Account'}
+                    </span>
+                  </div>
+                  
                   <div className="relative mb-6">
-                    <div className="w-32 h-32 mx-auto bg-gradient-to-r from-orange-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                    <div className={`w-32 h-32 mx-auto ${
+                      accountType === 'premium' 
+                        ? 'bg-gradient-to-r from-yellow-400 to-orange-500' 
+                        : 'bg-gradient-to-r from-gray-400 to-gray-600'
+                    } rounded-full flex items-center justify-center shadow-lg overflow-hidden`}>
                       {avatarUrl ? (
                         <img 
                           src={avatarUrl} 
@@ -487,6 +708,39 @@ const UserProfile = () => {
           </div>
         </div>
       </div>
+      
+      {/* Delete Account Section */}
+      <Card className="mt-8 border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-900/10 backdrop-blur-md">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-red-600 dark:text-red-400">
+            Delete Account
+          </CardTitle>
+          <p className="text-sm text-red-600/80 dark:text-red-400/80">
+            Permanently delete your account and all associated data
+          </p>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-slate-600 dark:text-red-300/90 mb-4">
+            This action cannot be undone. All your data, including mood boards, payment records, and preferences, will be permanently removed.
+            {accountType === 'premium' && (
+              <span className="block mt-2 font-medium text-red-600 dark:text-red-400">
+                Note: This will cancel your active subscription. No refunds will be issued.
+              </span>
+            )}
+          </p>
+          <Button
+            variant="destructive"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full sm:w-auto"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete My Account
+          </Button>
+        </CardContent>
+      </Card>
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && <DeleteAccountConfirmation />}
     </div>
   );
 };

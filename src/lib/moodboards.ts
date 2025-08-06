@@ -114,6 +114,23 @@ export async function deleteMoodBoard(id: string) {
 }
 
 /**
+ * Delete all mood boards for a specific user
+ */
+export async function deleteAllUserMoodBoards(userId: string) {
+  const { error } = await supabase
+    .from('mood_boards')
+    .delete()
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error deleting all user mood boards:', error);
+    throw error;
+  }
+
+  return true;
+}
+
+/**
  * Update the status of a mood board
  */
 export async function updateMoodBoardStatus(id: string, status: 'in_progress' | 'completed' | 'archived') {

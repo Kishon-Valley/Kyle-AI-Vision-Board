@@ -1,5 +1,5 @@
 import React from 'react';
-import { Instagram, Twitter, Linkedin, Youtube } from 'lucide-react';
+
 
 const Footer = () => {
   return (
@@ -19,41 +19,21 @@ const Footer = () => {
             </p>
           </div>
 
-          {/* Social Media Links */}
-          <div className="flex justify-center space-x-4">
-            <a 
-              href="#" 
-              className="p-2 bg-gradient-to-r from-orange-500/20 to-pink-500/20 rounded-full hover:from-orange-500/30 hover:to-pink-500/30 transition-all duration-300 transform hover:scale-110 backdrop-blur-sm"
-            >
-              <Instagram className="w-4 h-4 text-orange-400" />
-            </a>
-            <a 
-              href="#" 
-              className="p-2 bg-gradient-to-r from-orange-500/20 to-pink-500/20 rounded-full hover:from-orange-500/30 hover:to-pink-500/30 transition-all duration-300 transform hover:scale-110 backdrop-blur-sm"
-            >
-              <Twitter className="w-4 h-4 text-orange-400" />
-            </a>
-            <a 
-              href="#" 
-              className="p-2 bg-gradient-to-r from-orange-500/20 to-pink-500/20 rounded-full hover:from-orange-500/30 hover:to-pink-500/30 transition-all duration-300 transform hover:scale-110 backdrop-blur-sm"
-            >
-              <Linkedin className="w-4 h-4 text-orange-400" />
-            </a>
-            <a 
-              href="#" 
-              className="p-2 bg-gradient-to-r from-orange-500/20 to-pink-500/20 rounded-full hover:from-orange-500/30 hover:to-pink-500/30 transition-all duration-300 transform hover:scale-110 backdrop-blur-sm"
-            >
-              <Youtube className="w-4 h-4 text-orange-400" />
-            </a>
-          </div>
-
           {/* Attribution and Copyright */}
           <div className="space-y-1 pt-4 border-t border-slate-700/50 dark:border-slate-800/50">
-            <p className="text-sm font-medium bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-              Built by SofiTchAiSolutions
+            <p className="text-sm font-medium">
+              Built by{' '}
+              <a 
+                href="https://lmtsoftware-portfolio.vercel.app/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hover:underline underline-offset-4 decoration-2 transition-all duration-300 hover:from-blue-300 hover:to-cyan-300 font-semibold"
+              >
+                SofiTechAiSolutions
+              </a>
             </p>
             <p className="text-xs text-slate-500">
-              {new Date().getFullYear()} Moodboard Generator. All rights reserved.
+              Copyright © {new Date().getFullYear()} Moodboard Generator. All rights reserved.
             </p>
           </div>
         </div>
