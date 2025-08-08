@@ -1,33 +1,25 @@
-import { env } from '@/lib/env';
 import { createClient } from '@supabase/supabase-js';
 
-// Reusable helper to build JSON responses consistently
-function jsonResponse(body: any, status = 200, headers: Record<string, string> = {}) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-  });
-}
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-export async function POST(request: Request) {
   try {
-    const { userId } = await request.json();
+    const { userId } = req.body;
 
     if (!userId) {
-      return jsonResponse({ error: 'Missing userId' }, 400);
+      return res.status(400).json({ error: 'Missing userId' });
     }
 
     // Guard against missing backend credentials
-    if (!env.supabase.url || !env.supabase.serviceKey) {
+    if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
       console.error('Supabase admin credentials are not configured.');
-      return jsonResponse({ error: 'Server mis-configuration' }, 500);
+      return res.status(500).json({ error: 'Server mis-configuration' });
     }
 
     // Admin client (service role) – NEVER expose service key to the client bundle
-    const adminClient = createClient(env.supabase.url, env.supabase.serviceKey, {
+    const adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -43,7 +35,7 @@ export async function POST(request: Request) {
 
     if (userError) {
       console.error('Error fetching user subscription:', userError);
-      return jsonResponse({ error: 'Failed to fetch user subscription' }, 500);
+      return res.status(500).json({ error: 'Failed to fetch user subscription' });
     }
 
     // If user has an active subscription, cancel it
@@ -60,7 +52,7 @@ export async function POST(request: Request) {
 
         if (updateError) {
           console.error('Error updating subscription status:', updateError);
-          return jsonResponse({ error: 'Failed to cancel subscription' }, 500);
+          return res.status(500).json({ error: 'Failed to cancel subscription' });
         }
 
         console.log(`Subscription cancelled for user: ${userId}`);
@@ -71,9 +63,9 @@ export async function POST(request: Request) {
       }
     }
 
-    return jsonResponse({ success: true, message: 'Subscription cancelled successfully' });
+    return res.status(200).json({ success: true, message: 'Subscription cancelled successfully' });
   } catch (err) {
     console.error('Unhandled error in cancel-subscription route:', err);
-    return jsonResponse({ error: 'Internal server error' }, 500);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
