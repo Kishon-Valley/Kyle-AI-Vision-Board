@@ -66,7 +66,7 @@ const PaymentSuccessPage = () => {
     };
 
     verifyPayment();
-  }, [location, navigate]);
+  }, [location, navigate, refreshUser]);
 
   const renderContent = () => {
     switch (status) {

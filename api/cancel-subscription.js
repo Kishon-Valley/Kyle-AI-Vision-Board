@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,6 +18,11 @@ export default async function handler(req, res) {
       console.error('Supabase admin credentials are not configured.');
       return res.status(500).json({ error: 'Server mis-configuration' });
     }
+
+    // Initialize Stripe
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-07-30.basil',
+    });
 
     // Admin client (service role) – NEVER expose service key to the client bundle
     const adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -41,6 +47,14 @@ export default async function handler(req, res) {
     // If user has an active subscription, cancel it
     if (userData?.subscription_id && userData?.subscription_status === 'active') {
       try {
+        // Cancel subscription in Stripe
+        if (userData.subscription_id.startsWith('sub_')) {
+          await stripe.subscriptions.update(userData.subscription_id, {
+            cancel_at_period_end: true
+          });
+          console.log(`Stripe subscription cancelled for user: ${userId}`);
+        }
+
         // Update subscription status to cancelled
         const { error: updateError } = await adminClient
           .from('users')

@@ -132,11 +132,23 @@ const UserProfile = () => {
     const fetchSubscriptionStatus = async () => {
       if (!user) return;
       try {
-        const { hasSubscription, error } = await checkUserSubscription(user.id);
-        if (error) {
-          console.error('Subscription status error:', error);
+        const response = await fetch('/api/check-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setAccountType(data.hasSubscription ? 'premium' : 'free');
+        } else {
+          // Fallback to local check
+          const { hasSubscription, error } = await checkUserSubscription(user.id);
+          if (error) {
+            console.error('Subscription status error:', error);
+          }
+          setAccountType(hasSubscription ? 'premium' : 'free');
         }
-        setAccountType(hasSubscription ? 'premium' : 'free');
       } catch (err) {
         console.error('Error fetching subscription status:', err);
       }

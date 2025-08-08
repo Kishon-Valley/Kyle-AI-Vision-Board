@@ -25,17 +25,36 @@ export default async function handler(req, res) {
       ? process.env.VITE_STRIPE_PRICE_ID_YEARLY 
       : process.env.VITE_STRIPE_PRICE_ID_MONTHLY;
 
-    // Create a PaymentIntent with Stripe
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: billingInterval === 'year' ? 1500 : 199, // Amount in cents
-      currency: 'usd',
-      metadata: { user_id: userId, billing_interval: billingInterval },
-      automatic_payment_methods: { enabled: true },
+    // Create a Checkout Session for better subscription handling
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `${process.env.VITE_APP_URL || 'http://localhost:5173'}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.VITE_APP_URL || 'http://localhost:5173'}/pricing`,
+      metadata: { 
+        user_id: userId, 
+        billing_interval: billingInterval 
+      },
+      subscription_data: {
+        metadata: {
+          user_id: userId,
+          billing_interval: billingInterval
+        }
+      }
     });
 
-    return res.status(200).json({ clientSecret: paymentIntent.client_secret });
+    return res.status(200).json({ 
+      sessionId: session.id,
+      url: session.url 
+    });
   } catch (err) {
-    console.error('Error creating payment intent:', err);
+    console.error('Error creating checkout session:', err);
     return res.status(500).json({ 
       error: 'Internal server error', 
       details: err.message 
