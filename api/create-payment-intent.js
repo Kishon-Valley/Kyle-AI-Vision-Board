@@ -35,8 +35,8 @@ export default async function handler(req, res) {
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.VITE_APP_URL || 'http://localhost:5173'}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.VITE_APP_URL || 'http://localhost:5173'}/pricing`,
+      success_url: `${process.env.VITE_APP_URL || 'https://www.moodboardgenerator.com'}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.VITE_APP_URL || 'https://www.moodboardgenerator.com'}/pricing`,
       metadata: { 
         user_id: userId, 
         billing_interval: billingInterval 
