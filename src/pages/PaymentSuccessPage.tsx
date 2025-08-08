@@ -35,7 +35,14 @@ const PaymentSuccessPage = () => {
           body: JSON.stringify({ sessionId }),
         });
 
-        const data = await response.json();
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          setStatus('error');
+          setError(`Failed to verify payment: ${response.status} ${response.statusText}`);
+          return;
+        }
 
         if (response.ok && data.success) {
           // Crucial step: Refresh the Supabase session to get the latest user data,

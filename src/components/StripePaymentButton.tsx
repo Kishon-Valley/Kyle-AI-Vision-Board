@@ -85,12 +85,20 @@ const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({ billingInterv
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ billingInterval, userId: user.id }),
         });
-        const data = await res.json();
-        if (res.ok && data.clientSecret) {
-          setClientSecret(data.clientSecret);
-        } else {
-          toast.error(data.error || 'Failed to initialize payment');
+        let errorMessage = 'Failed to initialize payment';
+        try {
+          const data = await res.json();
+          if (res.ok && data.clientSecret) {
+            setClientSecret(data.clientSecret);
+            return;
+          } else {
+            errorMessage = data.error || errorMessage;
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use the status text
+          errorMessage = `${errorMessage}: ${res.status} ${res.statusText}`;
         }
+        toast.error(errorMessage);
       } catch (err) {
         toast.error('Failed to initialize payment');
       } finally {

@@ -305,8 +305,15 @@ const UserProfile = () => {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to cancel subscription');
+          let errorMessage = 'Failed to cancel subscription';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (parseError) {
+            // If JSON parsing fails, use the status text
+            errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
         }
           
         } catch (subError) {
@@ -353,15 +360,22 @@ const UserProfile = () => {
       }
 
       // Step 3: After cleanup, delete the auth user via the API endpoint
-      const deleteUserResponse = await fetch('/api/delete-user', {
+      const deleteUserResponse = await fetch('/api/delete-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
       });
 
       if (!deleteUserResponse.ok) {
-        const errorData = await deleteUserResponse.json();
-        throw new Error(errorData.error || 'Failed to delete user');
+        let errorMessage = 'Failed to delete user';
+        try {
+          const errorData = await deleteUserResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          // If JSON parsing fails, use the status text
+          errorMessage = `${errorMessage}: ${deleteUserResponse.status} ${deleteUserResponse.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
       
       // Step 4: Sign out to clear the session and notify the user
