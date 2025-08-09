@@ -22,6 +22,24 @@ const AuthCallback = () => {
         setIsProcessing(true);
         setError(null);
 
+        // Check for OAuth errors in URL first
+        const urlParams = new URLSearchParams(location.search);
+        const errorParam = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
+        
+        if (errorParam) {
+          console.error('❌ AuthCallback: OAuth error detected:', errorParam, errorDescription);
+          
+          // Handle specific database errors
+          if (errorDescription?.includes('Database error saving new user')) {
+            setError('Account creation failed. This usually happens when the database is not properly configured. Please contact support or try again later.');
+            return;
+          }
+          
+          setError(errorDescription || 'Authentication was cancelled or failed.');
+          return;
+        }
+
         // Get the current session to check if auth was successful
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
@@ -69,20 +87,9 @@ const AuthCallback = () => {
             navigate('/pricing', { replace: true });
           }
         } else {
-          // No session found, check if there's an error in the URL
-          console.log('❌ AuthCallback: No session found, checking for OAuth errors...');
-          const urlParams = new URLSearchParams(location.search);
-          const errorParam = urlParams.get('error');
-          const errorDescription = urlParams.get('error_description');
-          
-          console.log('🔍 AuthCallback: URL params:', { errorParam, errorDescription });
-          
-          if (errorParam) {
-            console.error('❌ AuthCallback: OAuth error:', errorParam, errorDescription);
-            setError(errorDescription || 'Authentication was cancelled or failed.');
-          } else {
-            setError('Authentication failed. Please try again.');
-          }
+          // No session found
+          console.log('❌ AuthCallback: No session found');
+          setError('Authentication failed. Please try again.');
         }
       } catch (err) {
         console.error('❌ AuthCallback: Unexpected error during auth callback:', err);
@@ -107,12 +114,22 @@ const AuthCallback = () => {
           </div>
           <h2 className="text-xl font-semibold text-red-800 mb-2">Authentication Failed</h2>
           <p className="text-red-600 mb-6">{error}</p>
-          <button
-            onClick={() => navigate('/', { replace: true })}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
-          >
-            Return to Home
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/', { replace: true })}
+              className="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
+            >
+              Return to Home
+            </button>
+            {error.includes('Database error') && (
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                Try Again
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
