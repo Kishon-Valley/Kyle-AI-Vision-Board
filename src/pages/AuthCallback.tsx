@@ -51,41 +51,7 @@ const AuthCallback = () => {
             console.log('🔍 AuthCallback: Subscription check result:', { hasSubscription, error: subError });
             
             if (subError) {
-              console.warn('⚠️ AuthCallback: Error checking subscription, attempting database recovery...');
-              
-              // Try to fix database issues by calling the OAuth signup handler
-              try {
-                const response = await fetch('/api/oauth-signup-handler', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    userId: session.user.id,
-                    email: session.user.email,
-                    provider: 'google'
-                  }),
-                });
-
-                if (response.ok) {
-                  console.log('✅ AuthCallback: Database recovery successful');
-                  // Try checking subscription again
-                  const { hasSubscription: recoveredSub } = await checkUserSubscription(session.user.id);
-                  if (recoveredSub) {
-                    console.log('🎯 AuthCallback: User has subscription, redirecting to questionnaire');
-                    navigate('/questionnaire', { replace: true });
-                  } else {
-                    console.log('🎯 AuthCallback: User does not have subscription, redirecting to pricing');
-                    navigate('/pricing', { replace: true });
-                  }
-                } else {
-                  const errorData = await response.json();
-                  console.error('❌ AuthCallback: Database recovery failed:', errorData);
-                  setError(errorData.error || 'Database error saving new user');
-                }
-              } catch (recoveryError) {
-                console.error('❌ AuthCallback: Error during database recovery:', recoveryError);
-                setError('Database error saving new user');
-              }
-              return;
+              console.warn('⚠️ AuthCallback: Error checking subscription, defaulting to no subscription:', subError);
             }
             
             // Determine where to redirect based on subscription status
@@ -141,22 +107,12 @@ const AuthCallback = () => {
           </div>
           <h2 className="text-xl font-semibold text-red-800 mb-2">Authentication Failed</h2>
           <p className="text-red-600 mb-6">{error}</p>
-          <div className="space-y-3">
-            <button
-              onClick={() => navigate('/', { replace: true })}
-              className="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
-            >
-              Return to Home
-            </button>
-            {error.includes('Database error') && (
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors"
-              >
-                Try Again
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => navigate('/', { replace: true })}
+            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
+          >
+            Return to Home
+          </button>
         </div>
       </div>
     );
