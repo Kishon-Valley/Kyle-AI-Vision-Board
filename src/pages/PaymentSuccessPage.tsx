@@ -13,7 +13,7 @@ const PaymentSuccessPage = () => {
   const [error, setError] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -45,9 +45,46 @@ const PaymentSuccessPage = () => {
         }
 
         if (response.ok && data.success) {
-          // Crucial step: Refresh the Supabase session to get the latest user data,
-          // including the new subscription status.
+          // Step 1: Refresh the Supabase session to get the latest user data
           await refreshUser();
+          
+          // Step 2: Force refresh subscription status by calling the check-subscription API
+          if (user?.id) {
+            try {
+              // Wait a moment for database updates to propagate
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              const subResponse = await fetch('/api/check-subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id }),
+              });
+              
+              if (subResponse.ok) {
+                const subData = await subResponse.json();
+                console.log('Subscription status after payment:', subData);
+                
+                // If subscription is still not active, wait a moment and try again
+                if (!subData.hasSubscription) {
+                  console.log('Subscription not yet active, waiting and retrying...');
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                  
+                  const retryResponse = await fetch('/api/check-subscription', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id }),
+                  });
+                  
+                  if (retryResponse.ok) {
+                    const retryData = await retryResponse.json();
+                    console.log('Subscription status after retry:', retryData);
+                  }
+                }
+              }
+            } catch (subError) {
+              console.warn('Error checking subscription status:', subError);
+            }
+          }
           
           setStatus('success');
           // Redirect after a short delay to allow the user to see the success message.
@@ -66,7 +103,7 @@ const PaymentSuccessPage = () => {
     };
 
     verifyPayment();
-  }, [location, navigate, refreshUser]);
+  }, [location, navigate, refreshUser, user?.id]);
 
   const renderContent = () => {
     switch (status) {
@@ -84,6 +121,30 @@ const PaymentSuccessPage = () => {
             <CheckCircle2 className="h-16 w-16 text-green-500" />
             <CardTitle className="text-3xl font-bold">Payment Successful!</CardTitle>
             <CardDescription>Your subscription is active. Redirecting you now...</CardDescription>
+            <div className="mt-4 space-y-2">
+              <Button 
+                onClick={async () => {
+                  if (user?.id) {
+                    try {
+                      const response = await fetch('/api/check-subscription', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.id }),
+                      });
+                      const data = await response.json();
+                      console.log('Manual subscription check:', data);
+                      alert(`Subscription Status: ${data.subscriptionStatus}\nHas Subscription: ${data.hasSubscription}`);
+                    } catch (error) {
+                      console.error('Manual check failed:', error);
+                    }
+                  }
+                }}
+                variant="outline"
+                size="sm"
+              >
+                Debug: Check Subscription Status
+              </Button>
+            </div>
           </div>
         );
       case 'error':
@@ -92,7 +153,31 @@ const PaymentSuccessPage = () => {
             <XCircle className="h-16 w-16 text-red-500" />
             <CardTitle className="text-2xl">Payment Error</CardTitle>
             <CardDescription>{error}</CardDescription>
-            <Button onClick={() => navigate('/pricing')}>Go to Pricing</Button>
+            <div className="space-y-2">
+              <Button onClick={() => navigate('/pricing')}>Go to Pricing</Button>
+              {user?.id && (
+                <Button 
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/check-subscription', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.id }),
+                      });
+                      const data = await response.json();
+                      console.log('Debug subscription check:', data);
+                      alert(`Subscription Status: ${data.subscriptionStatus}\nHas Subscription: ${data.hasSubscription}`);
+                    } catch (error) {
+                      console.error('Debug check failed:', error);
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  Debug: Check Subscription Status
+                </Button>
+              )}
+            </div>
           </div>
         );
       default:

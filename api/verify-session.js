@@ -37,30 +37,42 @@ export default async function handler(req, res) {
       expand: ['subscription', 'customer'],
     });
 
+    console.log('Retrieved session:', {
+      id: session.id,
+      payment_status: session.payment_status,
+      subscription: session.subscription,
+      metadata: session.metadata
+    });
+
     if (!session) {
       return res.status(400).json({ error: 'Invalid session' });
     }
 
     // Check if payment was successful
     if (session.payment_status !== 'paid') {
+      console.log('Payment not completed. Status:', session.payment_status);
       return res.status(400).json({ error: 'Payment not completed' });
     }
 
     // Extract user ID from metadata
     const userId = session.metadata?.user_id;
     if (!userId) {
+      console.error('No user ID found in session metadata');
       return res.status(400).json({ error: 'No user ID found in session metadata' });
     }
 
+    console.log(`Verifying session for user: ${userId}`);
+
     // Update user subscription status in database
-    const { error: updateError } = await adminClient
+    const { data: updateData, error: updateError } = await adminClient
       .from('users')
       .upsert({
         id: userId,
         subscription_id: session.subscription || session.id,
         subscription_status: 'active',
         updated_at: new Date().toISOString()
-      });
+      })
+      .select();
 
     if (updateError) {
       console.error('Error updating user subscription:', updateError);
@@ -68,6 +80,7 @@ export default async function handler(req, res) {
     }
 
     console.log(`Subscription activated for user: ${userId}`);
+    console.log('Updated user data:', updateData);
 
     return res.status(200).json({ 
       success: true, 
@@ -76,6 +89,7 @@ export default async function handler(req, res) {
         payment_status: session.payment_status,
         subscription_id: session.subscription
       },
+      user: updateData?.[0],
       message: 'Session verified and subscription activated successfully' 
     });
   } catch (err) {

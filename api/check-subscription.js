@@ -13,6 +13,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing userId' });
     }
 
+    console.log(`Checking subscription for user: ${userId}`);
+
     // Guard against missing backend credentials
     if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
       console.error('Supabase admin credentials are not configured.');
@@ -39,12 +41,15 @@ export default async function handler(req, res) {
       .eq('id', userId)
       .single();
 
+    console.log('User data from database:', userData);
+
     if (userError) {
       console.error('Error fetching user subscription:', userError);
       return res.status(500).json({ error: 'Failed to fetch user subscription' });
     }
 
     if (!userData?.subscription_id) {
+      console.log('No subscription found for user');
       return res.status(200).json({ 
         hasSubscription: false, 
         subscriptionStatus: 'inactive',
@@ -58,6 +63,7 @@ export default async function handler(req, res) {
       if (userData.subscription_id.startsWith('sub_')) {
         const subscription = await stripe.subscriptions.retrieve(userData.subscription_id);
         stripeStatus = subscription.status;
+        console.log('Stripe subscription status:', stripeStatus);
       }
     } catch (stripeError) {
       console.error('Error fetching Stripe subscription:', stripeError);
@@ -85,8 +91,11 @@ export default async function handler(req, res) {
         localStatus = 'inactive';
     }
 
+    console.log(`Status mapping: Stripe=${stripeStatus} -> Local=${localStatus}`);
+
     // Update local database if status differs
     if (localStatus !== userData.subscription_status) {
+      console.log(`Updating subscription status: ${userData.subscription_status} -> ${localStatus}`);
       const { error: updateError } = await adminClient
         .from('users')
         .update({
@@ -102,12 +111,16 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ 
+    const finalResult = {
       hasSubscription: localStatus === 'active',
       subscriptionStatus: localStatus,
       stripeStatus: stripeStatus,
       message: 'Subscription status checked and synced'
-    });
+    };
+
+    console.log('Final subscription check result:', finalResult);
+
+    return res.status(200).json(finalResult);
   } catch (err) {
     console.error('Unhandled error in check-subscription route:', err);
     return res.status(500).json({ error: 'Internal server error' });

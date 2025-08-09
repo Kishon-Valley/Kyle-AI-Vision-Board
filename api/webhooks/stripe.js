@@ -43,25 +43,33 @@ export default async function handler(req, res) {
       case 'checkout.session.completed': {
         const session = event.data.object;
         console.log('Payment completed for session:', session.id);
+        console.log('Session metadata:', session.metadata);
+        console.log('Session subscription:', session.subscription);
         
         // Extract user ID from metadata
         const userId = session.metadata?.user_id;
         if (userId) {
+          console.log(`Processing subscription activation for user: ${userId}`);
+          
           // Update user subscription status to active
-          const { error: updateError } = await adminClient
+          const { data: updateData, error: updateError } = await adminClient
             .from('users')
             .upsert({
               id: userId,
               subscription_id: session.subscription || session.id,
               subscription_status: 'active',
               updated_at: new Date().toISOString()
-            });
+            })
+            .select();
 
           if (updateError) {
             console.error('Error updating user subscription:', updateError);
           } else {
             console.log(`Subscription activated for user: ${userId}`);
+            console.log('Updated user data:', updateData);
           }
+        } else {
+          console.error('No user ID found in session metadata');
         }
         break;
       }
