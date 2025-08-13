@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
@@ -39,9 +39,42 @@ const PaymentPage = () => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { hasSubscription, isLoading: subLoading } = useSubscription();
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [showContent, setShowContent] = useState(false);
+  const mountedRef = useRef(false);
+
+  // Ensure minimum loading time to prevent flickering
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowContent(true);
+    }, 300); // Minimum 300ms loading time
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handle redirect to questionnaire for users with active subscriptions
+  useEffect(() => {
+    if (isAuthenticated && hasSubscription && !isRedirecting && mountedRef.current) {
+      setIsRedirecting(true);
+      // Add a small delay to prevent rapid redirects
+      const timer = setTimeout(() => {
+        navigate('/questionnaire', { replace: true });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, hasSubscription, navigate, isRedirecting]);
+
+  // Mark component as mounted after initial render
+  useEffect(() => {
+    mountedRef.current = true;
+  }, []);
 
   // Show loading while checking authentication and subscription status
-  if (authLoading || subLoading) {
+  // Only show loading if we're still loading AND we haven't determined the user's state yet
+  // OR if we haven't shown content yet (minimum loading time)
+  const shouldShowLoading = (authLoading || subLoading) && !isAuthenticated || !showContent;
+  
+  if (shouldShowLoading) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <div className="flex flex-col items-center justify-center space-y-4">
@@ -52,42 +85,14 @@ const PaymentPage = () => {
     );
   }
 
-  // If user has an active subscription, show success page content
-  if (isAuthenticated && hasSubscription) {
+  // If user has an active subscription, show redirecting message
+  if (isAuthenticated && hasSubscription && isRedirecting) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-3xl font-bold">Thank you for your subscription!</CardTitle>
-            <CardDescription className="text-xl mt-2">You have an active subscription to our service</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 mb-4">Your subscription gives you access to all features including:</p>
-            <ul className="space-y-2">
-              <li className="flex items-center">
-                <Check className="h-5 w-5 text-green-500 mr-2" />
-                Unlimited mood boards
-              </li>
-              <li className="flex items-center">
-                <Check className="h-5 w-5 text-green-500 mr-2" />
-                AI-powered design suggestions
-              </li>
-              <li className="flex items-center">
-                <Check className="h-5 w-5 text-green-500 mr-2" />
-                High-resolution downloads
-              </li>
-              <li className="flex items-center">
-                <Check className="h-5 w-5 text-green-500 mr-2" />
-                Priority support
-              </li>
-            </ul>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Button onClick={() => navigate('/questionnaire')} className="bg-orange-500 hover:bg-orange-600">
-              Start Creating
-            </Button>
-          </CardFooter>
-        </Card>
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+          <p className="text-gray-600">Redirecting to questionnaire...</p>
+        </div>
       </div>
     );
   }
@@ -126,11 +131,11 @@ const PaymentPage = () => {
                   variant="outline" 
                   className="w-full"
                   onClick={() => {
-                    // For now, just navigate to questionnaire
-                    navigate('/questionnaire');
+                    // Redirect to home page for non-authenticated users
+                    navigate('/');
                   }}
                 >
-                  Select Plan
+                  Sign In to Subscribe
                 </Button>
               </CardFooter>
             </Card>

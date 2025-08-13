@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { AuthError, AuthResponse, Session, User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -34,43 +34,9 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const isInitializedRef = useRef(false);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    // Check for active Supabase session
-    const getSession = async () => {
-      setIsLoading(true);
-      
-      // Get session from Supabase
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        const { user: supabaseUser } = session;
-        setUserFromSupabase(supabaseUser);
-      }
-      
-      setIsLoading(false);
-    };
-    
-    getSession();
-    
-    // Set up auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        const supabaseUser = session?.user ?? null;
-        if (supabaseUser) {
-          setUserFromSupabase(supabaseUser);
-        } else {
-          setUser(null);
-        }
-        setIsLoading(false);
-      }
-    );
-    
-    return () => {
-      authListener?.subscription?.unsubscribe();
-    };
-  }, []);
-  
   // Helper function to set user from Supabase user object
   const setUserFromSupabase = (supabaseUser: SupabaseUser) => {
     const { id, email, user_metadata } = supabaseUser;
@@ -84,24 +50,94 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // Helper function to safely set loading state with debouncing
+  const setLoadingSafely = (loading: boolean) => {
+    // Clear any existing timeout
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+
+    // If setting to false, add a small delay to prevent rapid toggles
+    if (!loading && isInitializedRef.current) {
+      loadingTimeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+      }, 100);
+    } else {
+      setIsLoading(loading);
+    }
+  };
+
+  useEffect(() => {
+    // Check for active Supabase session
+    const getSession = async () => {
+      setLoadingSafely(true);
+      
+      try {
+        // Get session from Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          const { user: supabaseUser } = session;
+          setUserFromSupabase(supabaseUser);
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
+        setLoadingSafely(false);
+        isInitializedRef.current = true;
+      }
+    };
+    
+    getSession();
+    
+    // Set up auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        const supabaseUser = session?.user ?? null;
+        if (supabaseUser) {
+          setUserFromSupabase(supabaseUser);
+        } else {
+          setUser(null);
+        }
+        // Only set loading to false if we've already initialized
+        if (isInitializedRef.current) {
+          setLoadingSafely(false);
+        }
+      }
+    );
+    
+    return () => {
+      authListener?.subscription?.unsubscribe();
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    const response = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setIsLoading(false);
-    return { error: response.error };
+    setLoadingSafely(true);
+    try {
+      const response = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { error: response.error };
+    } finally {
+      setLoadingSafely(false);
+    }
   };
   
   const signUpWithEmail = async (email: string, password: string) => {
-    setIsLoading(true);
-    const response = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    setIsLoading(false);
-    return { error: response.error };
+    setLoadingSafely(true);
+    try {
+      const response = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      return { error: response.error };
+    } finally {
+      setLoadingSafely(false);
+    }
   };
   
   const loginWithGoogle = async () => {
@@ -131,10 +167,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    setIsLoading(true);
-    await supabase.auth.signOut();
-    setUser(null);
-    setIsLoading(false);
+    setLoadingSafely(true);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+    } finally {
+      setLoadingSafely(false);
+    }
   };
 
   const refreshUser = async () => {

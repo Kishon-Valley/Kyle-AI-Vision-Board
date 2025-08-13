@@ -45,12 +45,17 @@ const PaymentSuccessPage = () => {
         }
 
         if (response.ok && data.success) {
+          console.log('Payment verification successful:', data);
+          
           // Step 1: Refresh the Supabase session to get the latest user data
           await refreshUser();
+          console.log('User session refreshed');
           
           // Step 2: Force refresh subscription status by calling the check-subscription API
           if (user?.id) {
             try {
+              console.log('Checking subscription status for user:', user.id);
+              
               // Wait a moment for database updates to propagate
               await new Promise(resolve => setTimeout(resolve, 1000));
               
@@ -78,12 +83,22 @@ const PaymentSuccessPage = () => {
                   if (retryResponse.ok) {
                     const retryData = await retryResponse.json();
                     console.log('Subscription status after retry:', retryData);
+                    
+                    if (!retryData.hasSubscription) {
+                      console.error('Subscription still not active after retry. This indicates a webhook or database issue.');
+                      setError('Payment verified but subscription activation is delayed. Please contact support if this persists.');
+                      return;
+                    }
                   }
                 }
+              } else {
+                console.error('Failed to check subscription status:', subResponse.status, subResponse.statusText);
               }
             } catch (subError) {
               console.warn('Error checking subscription status:', subError);
             }
+          } else {
+            console.error('No user ID available for subscription check');
           }
           
           setStatus('success');
@@ -92,6 +107,7 @@ const PaymentSuccessPage = () => {
             navigate('/questionnaire');
           }, 3000);
         } else {
+          console.error('Payment verification failed:', data);
           setStatus('error');
           setError(data.error || 'Failed to verify payment. Please contact support.');
         }

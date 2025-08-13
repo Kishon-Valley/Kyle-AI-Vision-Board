@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, checkUserSubscription } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,9 +9,16 @@ export const useSubscription = () => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('inactive');
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isCheckingRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
 
   // Function to check subscription status
-  const checkSubscriptionStatus = async () => {
+  const checkSubscriptionStatus = useCallback(async () => {
+    // Prevent multiple simultaneous checks
+    if (isCheckingRef.current) {
+      return;
+    }
+
     if (!user) {
       setHasSubscription(false);
       setSubscriptionStatus('inactive');
@@ -19,8 +26,19 @@ export const useSubscription = () => {
       return;
     }
 
+    // Prevent checking for the same user multiple times
+    if (lastUserIdRef.current === user.id) {
+      return;
+    }
+
     try {
+      isCheckingRef.current = true;
+      lastUserIdRef.current = user.id;
       setIsLoading(true);
+      
+      // Add a small delay to prevent rapid state changes
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // First try the new API endpoint for better synchronization
       const response = await fetch('/api/check-subscription', {
         method: 'POST',
@@ -48,27 +66,33 @@ export const useSubscription = () => {
       setSubscriptionStatus('inactive');
     } finally {
       setIsLoading(false);
+      isCheckingRef.current = false;
     }
-  };
+  }, [user]);
 
   // Initial check when component mounts or user changes
   useEffect(() => {
-    checkSubscriptionStatus();
-  }, [user]);
+    // Only check if user has changed
+    if (user?.id !== lastUserIdRef.current) {
+      checkSubscriptionStatus();
+    }
+  }, [user?.id, checkSubscriptionStatus]);
 
-  const checkSubscription = () => {
+  const checkSubscription = useCallback(() => {
     if (!hasSubscription) {
       navigate('/pricing', { replace: true });
       return false;
     }
     return true;
-  };
+  }, [hasSubscription, navigate]);
 
-  const refreshSubscription = async () => {
+  const refreshSubscription = useCallback(async () => {
     if (!user) return;
     
+    // Reset the ref to force a fresh check
+    lastUserIdRef.current = null;
     await checkSubscriptionStatus();
-  };
+  }, [user, checkSubscriptionStatus]);
 
   return {
     hasSubscription,
