@@ -63,12 +63,34 @@ export default async function handler(req, res) {
 
     console.log(`Verifying session for user: ${userId}`);
 
+    // Get the subscription ID (either from session.subscription or session.id)
+    const subscriptionId = session.subscription || session.id;
+    
+    // Verify subscription status in Stripe if it's a subscription
+    let stripeStatus = 'active';
+    if (subscriptionId.startsWith('sub_')) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        stripeStatus = subscription.status;
+        console.log('Stripe subscription status:', stripeStatus);
+        
+        // If subscription is not active, return error
+        if (stripeStatus !== 'active' && stripeStatus !== 'trialing') {
+          console.error('Subscription is not active in Stripe:', stripeStatus);
+          return res.status(400).json({ error: 'Subscription is not active' });
+        }
+      } catch (stripeError) {
+        console.error('Error fetching subscription from Stripe:', stripeError);
+        return res.status(500).json({ error: 'Failed to verify subscription with Stripe' });
+      }
+    }
+
     // Update user subscription status in database
     const { data: updateData, error: updateError } = await adminClient
       .from('users')
       .upsert({
         id: userId,
-        subscription_id: session.subscription || session.id,
+        subscription_id: subscriptionId,
         subscription_status: 'active',
         updated_at: new Date().toISOString()
       })
@@ -87,7 +109,8 @@ export default async function handler(req, res) {
       session: {
         id: session.id,
         payment_status: session.payment_status,
-        subscription_id: session.subscription
+        subscription_id: subscriptionId,
+        stripe_status: stripeStatus
       },
       user: updateData?.[0],
       message: 'Session verified and subscription activated successfully' 

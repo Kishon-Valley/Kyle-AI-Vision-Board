@@ -3,121 +3,141 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-type VerificationStatus = 'idle' | 'verifying' | 'success' | 'error';
+type VerificationStatus = 'idle' | 'verifying' | 'success' | 'error' | 'retrying';
 
 const PaymentSuccessPage = () => {
   const [status, setStatus] = useState<VerificationStatus>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { refreshUser, user } = useAuth();
 
-  useEffect(() => {
-    const verifyPayment = async () => {
-      const params = new URLSearchParams(location.search);
-      const sessionId = params.get('session_id');
+  const verifyPayment = async (isRetry = false) => {
+    const params = new URLSearchParams(location.search);
+    const sessionId = params.get('session_id');
 
-      if (!sessionId) {
+    if (!sessionId) {
+      setStatus('error');
+      setError('No session ID found in the URL.');
+      return;
+    }
+
+    if (isRetry) {
+      setStatus('retrying');
+      setRetryCount(prev => prev + 1);
+    } else {
+      setStatus('verifying');
+    }
+
+    try {
+      console.log(`Verifying payment session: ${sessionId} (attempt ${retryCount + 1})`);
+      
+      const response = await fetch('/api/verify-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
         setStatus('error');
-        setError('No session ID found in the URL.');
+        setError(`Failed to verify payment: ${response.status} ${response.statusText}`);
         return;
       }
 
-      setStatus('verifying');
-
-      try {
-        const response = await fetch('/api/verify-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId }),
-        });
-
-        let data;
-        try {
-          data = await response.json();
-        } catch (parseError) {
-          setStatus('error');
-          setError(`Failed to verify payment: ${response.status} ${response.statusText}`);
-          return;
-        }
-
-        if (response.ok && data.success) {
-          console.log('Payment verification successful:', data);
-          
-          // Step 1: Refresh the Supabase session to get the latest user data
-          await refreshUser();
-          console.log('User session refreshed');
-          
-          // Step 2: Force refresh subscription status by calling the check-subscription API
-          if (user?.id) {
-            try {
-              console.log('Checking subscription status for user:', user.id);
+      if (response.ok && data.success) {
+        console.log('Payment verification successful:', data);
+        
+        // Step 1: Refresh the Supabase session to get the latest user data
+        await refreshUser();
+        console.log('User session refreshed');
+        
+        // Step 2: Force refresh subscription status by calling the check-subscription API
+        if (user?.id) {
+          try {
+            console.log('Checking subscription status for user:', user.id);
+            
+            // Wait a moment for database updates to propagate
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const subResponse = await fetch('/api/check-subscription', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.id }),
+            });
+            
+            if (subResponse.ok) {
+              const subData = await subResponse.json();
+              console.log('Subscription status after payment:', subData);
               
-              // Wait a moment for database updates to propagate
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              
-              const subResponse = await fetch('/api/check-subscription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id }),
-              });
-              
-              if (subResponse.ok) {
-                const subData = await subResponse.json();
-                console.log('Subscription status after payment:', subData);
-                
-                // If subscription is still not active, wait a moment and try again
-                if (!subData.hasSubscription) {
-                  console.log('Subscription not yet active, waiting and retrying...');
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                  
-                  const retryResponse = await fetch('/api/check-subscription', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id }),
-                  });
-                  
-                  if (retryResponse.ok) {
-                    const retryData = await retryResponse.json();
-                    console.log('Subscription status after retry:', retryData);
-                    
-                    if (!retryData.hasSubscription) {
-                      console.error('Subscription still not active after retry. This indicates a webhook or database issue.');
-                      setError('Payment verified but subscription activation is delayed. Please contact support if this persists.');
-                      return;
-                    }
-                  }
-                }
+              if (subData.hasSubscription) {
+                setStatus('success');
+                // Redirect after a short delay to allow the user to see the success message
+                setTimeout(() => {
+                  navigate('/questionnaire');
+                }, 3000);
+                return;
               } else {
-                console.error('Failed to check subscription status:', subResponse.status, subResponse.statusText);
+                // If subscription is still not active and we haven't retried too many times
+                if (retryCount < 3) {
+                  console.log(`Subscription not yet active, retrying in 3 seconds... (attempt ${retryCount + 1}/3)`);
+                  setTimeout(() => {
+                    verifyPayment(true);
+                  }, 3000);
+                  return;
+                } else {
+                  console.error('Subscription still not active after multiple retries. This indicates a webhook or database issue.');
+                  setError('Payment verified but subscription activation is delayed. Please contact support if this persists.');
+                  setStatus('error');
+                  return;
+                }
               }
-            } catch (subError) {
-              console.warn('Error checking subscription status:', subError);
+            } else {
+              console.error('Failed to check subscription status:', subResponse.status, subResponse.statusText);
+              if (retryCount < 2) {
+                setTimeout(() => {
+                  verifyPayment(true);
+                }, 3000);
+                return;
+              }
             }
-          } else {
-            console.error('No user ID available for subscription check');
+          } catch (subError) {
+            console.warn('Error checking subscription status:', subError);
+            if (retryCount < 2) {
+              setTimeout(() => {
+                verifyPayment(true);
+              }, 3000);
+              return;
+            }
           }
-          
-          setStatus('success');
-          // Redirect after a short delay to allow the user to see the success message.
-          setTimeout(() => {
-            navigate('/questionnaire');
-          }, 3000);
         } else {
-          console.error('Payment verification failed:', data);
-          setStatus('error');
-          setError(data.error || 'Failed to verify payment. Please contact support.');
+          console.error('No user ID available for subscription check');
         }
-      } catch (err) {
+        
+        setStatus('success');
+        // Redirect after a short delay to allow the user to see the success message
+        setTimeout(() => {
+          navigate('/questionnaire');
+        }, 3000);
+      } else {
+        console.error('Payment verification failed:', data);
         setStatus('error');
-        setError('An unexpected error occurred. Please try again later.');
-        console.error('Verification failed:', err);
+        setError(data.error || 'Failed to verify payment. Please contact support.');
       }
-    };
+    } catch (err) {
+      setStatus('error');
+      setError('An unexpected error occurred. Please try again later.');
+      console.error('Verification failed:', err);
+    }
+  };
 
+  useEffect(() => {
     verifyPayment();
   }, [location, navigate, refreshUser, user?.id]);
 
@@ -129,6 +149,14 @@ const PaymentSuccessPage = () => {
             <Loader2 className="h-16 w-16 animate-spin text-blue-500" />
             <CardTitle className="text-2xl">Verifying Payment</CardTitle>
             <CardDescription>Please wait while we confirm your subscription...</CardDescription>
+          </div>
+        );
+      case 'retrying':
+        return (
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <RefreshCw className="h-16 w-16 animate-spin text-orange-500" />
+            <CardTitle className="text-2xl">Activating Subscription</CardTitle>
+            <CardDescription>Please wait while we activate your subscription... (Attempt {retryCount}/3)</CardDescription>
           </div>
         );
       case 'success':
@@ -149,7 +177,7 @@ const PaymentSuccessPage = () => {
                       });
                       const data = await response.json();
                       console.log('Manual subscription check:', data);
-                      alert(`Subscription Status: ${data.subscriptionStatus}\nHas Subscription: ${data.hasSubscription}`);
+                      alert(`Subscription Status: ${data.subscriptionStatus}\nHas Subscription: ${data.hasSubscription}\nStripe Status: ${data.stripeStatus || 'N/A'}`);
                     } catch (error) {
                       console.error('Manual check failed:', error);
                     }
@@ -171,6 +199,15 @@ const PaymentSuccessPage = () => {
             <CardDescription>{error}</CardDescription>
             <div className="space-y-2">
               <Button onClick={() => navigate('/pricing')}>Go to Pricing</Button>
+              <Button 
+                onClick={() => {
+                  setRetryCount(0);
+                  verifyPayment();
+                }}
+                variant="outline"
+              >
+                Retry Verification
+              </Button>
               {user?.id && (
                 <Button 
                   onClick={async () => {
@@ -182,7 +219,7 @@ const PaymentSuccessPage = () => {
                       });
                       const data = await response.json();
                       console.log('Debug subscription check:', data);
-                      alert(`Subscription Status: ${data.subscriptionStatus}\nHas Subscription: ${data.hasSubscription}`);
+                      alert(`Subscription Status: ${data.subscriptionStatus}\nHas Subscription: ${data.hasSubscription}\nStripe Status: ${data.stripeStatus || 'N/A'}`);
                     } catch (error) {
                       console.error('Debug check failed:', error);
                     }

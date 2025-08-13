@@ -13,6 +13,7 @@ export default async function handler(req, res) {
 
     const signature = req.headers['stripe-signature'];
     if (!signature) {
+      console.error('Missing Stripe signature in webhook');
       return res.status(400).json({ error: 'Missing Stripe signature' });
     }
 
@@ -29,6 +30,8 @@ export default async function handler(req, res) {
       console.error('Webhook signature verification failed:', err);
       return res.status(400).json({ error: 'Webhook signature verification failed' });
     }
+
+    console.log(`Processing webhook event: ${event.type}`);
 
     // Initialize Supabase admin client
     const adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
@@ -48,9 +51,14 @@ export default async function handler(req, res) {
         
         // Extract user ID from metadata
         const userId = session.metadata?.user_id;
-        if (userId) {
-          console.log(`Processing subscription activation for user: ${userId}`);
-          
+        if (!userId) {
+          console.error('No user ID found in session metadata');
+          return res.status(400).json({ error: 'No user ID found in session metadata' });
+        }
+
+        console.log(`Processing subscription activation for user: ${userId}`);
+        
+        try {
           // Update user subscription status to active
           const { data: updateData, error: updateError } = await adminClient
             .from('users')
@@ -64,12 +72,14 @@ export default async function handler(req, res) {
 
           if (updateError) {
             console.error('Error updating user subscription:', updateError);
+            return res.status(500).json({ error: 'Failed to update subscription status' });
           } else {
             console.log(`Subscription activated for user: ${userId}`);
             console.log('Updated user data:', updateData);
           }
-        } else {
-          console.error('No user ID found in session metadata');
+        } catch (dbError) {
+          console.error('Database error during subscription activation:', dbError);
+          return res.status(500).json({ error: 'Database error during subscription activation' });
         }
         break;
       }
@@ -77,15 +87,26 @@ export default async function handler(req, res) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
         console.log('Subscription updated:', subscription.id);
+        console.log('Subscription status:', subscription.status);
         
-        // Find user by subscription ID
-        const { data: userData, error: userError } = await adminClient
-          .from('users')
-          .select('id')
-          .eq('subscription_id', subscription.id)
-          .single();
+        try {
+          // Find user by subscription ID
+          const { data: userData, error: userError } = await adminClient
+            .from('users')
+            .select('id, subscription_status')
+            .eq('subscription_id', subscription.id)
+            .single();
 
-        if (!userError && userData) {
+          if (userError) {
+            console.error('Error finding user by subscription ID:', userError);
+            return res.status(500).json({ error: 'Failed to find user for subscription update' });
+          }
+
+          if (!userData) {
+            console.error('No user found for subscription ID:', subscription.id);
+            return res.status(404).json({ error: 'No user found for subscription' });
+          }
+
           let status = 'inactive';
           
           // Map Stripe subscription status to our status
@@ -103,6 +124,8 @@ export default async function handler(req, res) {
               status = 'inactive';
           }
 
+          console.log(`Updating subscription status for user ${userData.id}: ${userData.subscription_status} -> ${status}`);
+
           // Update user subscription status
           const { error: updateError } = await adminClient
             .from('users')
@@ -114,9 +137,13 @@ export default async function handler(req, res) {
 
           if (updateError) {
             console.error('Error updating subscription status:', updateError);
+            return res.status(500).json({ error: 'Failed to update subscription status' });
           } else {
             console.log(`Subscription status updated to ${status} for user: ${userData.id}`);
           }
+        } catch (error) {
+          console.error('Error processing subscription update:', error);
+          return res.status(500).json({ error: 'Error processing subscription update' });
         }
         break;
       }
@@ -125,14 +152,24 @@ export default async function handler(req, res) {
         const subscription = event.data.object;
         console.log('Subscription deleted:', subscription.id);
         
-        // Find user by subscription ID and mark as cancelled
-        const { data: userData, error: userError } = await adminClient
-          .from('users')
-          .select('id')
-          .eq('subscription_id', subscription.id)
-          .single();
+        try {
+          // Find user by subscription ID and mark as cancelled
+          const { data: userData, error: userError } = await adminClient
+            .from('users')
+            .select('id')
+            .eq('subscription_id', subscription.id)
+            .single();
 
-        if (!userError && userData) {
+          if (userError) {
+            console.error('Error finding user for subscription deletion:', userError);
+            return res.status(500).json({ error: 'Failed to find user for subscription deletion' });
+          }
+
+          if (!userData) {
+            console.error('No user found for deleted subscription ID:', subscription.id);
+            return res.status(404).json({ error: 'No user found for deleted subscription' });
+          }
+
           const { error: updateError } = await adminClient
             .from('users')
             .update({
@@ -142,10 +179,14 @@ export default async function handler(req, res) {
             .eq('id', userData.id);
 
           if (updateError) {
-            console.error('Error updating subscription status:', updateError);
+            console.error('Error updating subscription status for deletion:', updateError);
+            return res.status(500).json({ error: 'Failed to update subscription status for deletion' });
           } else {
             console.log(`Subscription cancelled for user: ${userData.id}`);
           }
+        } catch (error) {
+          console.error('Error processing subscription deletion:', error);
+          return res.status(500).json({ error: 'Error processing subscription deletion' });
         }
         break;
       }
@@ -154,14 +195,24 @@ export default async function handler(req, res) {
         const invoice = event.data.object;
         console.log('Payment failed for invoice:', invoice.id);
         
-        // Find user by subscription ID
-        const { data: userData, error: userError } = await adminClient
-          .from('users')
-          .select('id')
-          .eq('subscription_id', invoice.subscription)
-          .single();
+        try {
+          // Find user by subscription ID
+          const { data: userData, error: userError } = await adminClient
+            .from('users')
+            .select('id')
+            .eq('subscription_id', invoice.subscription)
+            .single();
 
-        if (!userError && userData) {
+          if (userError) {
+            console.error('Error finding user for payment failure:', userError);
+            return res.status(500).json({ error: 'Failed to find user for payment failure' });
+          }
+
+          if (!userData) {
+            console.error('No user found for failed payment subscription:', invoice.subscription);
+            return res.status(404).json({ error: 'No user found for failed payment' });
+          }
+
           const { error: updateError } = await adminClient
             .from('users')
             .update({
@@ -171,10 +222,14 @@ export default async function handler(req, res) {
             .eq('id', userData.id);
 
           if (updateError) {
-            console.error('Error updating subscription status:', updateError);
+            console.error('Error updating subscription status for payment failure:', updateError);
+            return res.status(500).json({ error: 'Failed to update subscription status for payment failure' });
           } else {
             console.log(`Subscription cancelled due to payment failure for user: ${userData.id}`);
           }
+        } catch (error) {
+          console.error('Error processing payment failure:', error);
+          return res.status(500).json({ error: 'Error processing payment failure' });
         }
         break;
       }
@@ -183,14 +238,24 @@ export default async function handler(req, res) {
         const invoice = event.data.object;
         console.log('Payment succeeded for invoice:', invoice.id);
         
-        // Find user by subscription ID
-        const { data: userData, error: userError } = await adminClient
-          .from('users')
-          .select('id')
-          .eq('subscription_id', invoice.subscription)
-          .single();
+        try {
+          // Find user by subscription ID
+          const { data: userData, error: userError } = await adminClient
+            .from('users')
+            .select('id')
+            .eq('subscription_id', invoice.subscription)
+            .single();
 
-        if (!userError && userData) {
+          if (userError) {
+            console.error('Error finding user for payment success:', userError);
+            return res.status(500).json({ error: 'Failed to find user for payment success' });
+          }
+
+          if (!userData) {
+            console.error('No user found for successful payment subscription:', invoice.subscription);
+            return res.status(404).json({ error: 'No user found for successful payment' });
+          }
+
           const { error: updateError } = await adminClient
             .from('users')
             .update({
@@ -200,13 +265,20 @@ export default async function handler(req, res) {
             .eq('id', userData.id);
 
           if (updateError) {
-            console.error('Error updating subscription status:', updateError);
+            console.error('Error updating subscription status for payment success:', updateError);
+            return res.status(500).json({ error: 'Failed to update subscription status for payment success' });
           } else {
             console.log(`Subscription reactivated for user: ${userData.id}`);
           }
+        } catch (error) {
+          console.error('Error processing payment success:', error);
+          return res.status(500).json({ error: 'Error processing payment success' });
         }
         break;
       }
+      
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
     }
 
     return res.status(200).json({ received: true });
