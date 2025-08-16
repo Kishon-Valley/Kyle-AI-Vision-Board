@@ -24,31 +24,19 @@ const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({ billingInterv
     setLoading(true);
 
     try {
-      console.log('Attempting to create payment intent...');
       const response = await fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ billingInterval, userId: user.id }),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Payment intent error:', response.status, errorText);
-        toast.error(`Payment setup failed: ${response.status} ${response.statusText}`);
-        return;
-      }
-
       const data = await response.json();
-      console.log('Payment intent success:', data);
 
-      if (data.url) {
+      if (response.ok && data.url) {
         // Redirect to Stripe Checkout
         window.location.href = data.url;
       } else {
-        toast.error('No checkout URL received');
+        toast.error(data.error || 'Failed to create payment session');
       }
     } catch (error) {
       console.error('Error creating payment session:', error);
