@@ -145,61 +145,47 @@ const PaymentPage = () => {
     );
   }
 
-  // If user is authenticated and has subscription, show active user message
+  // If user is authenticated but doesn't have subscription, show pricing plans
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="max-w-2xl mx-auto text-center">
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-8 mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-800 rounded-full mb-4">
-            <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            You're Already Subscribed!
-          </h1>
-          <p className="text-lg text-slate-600 dark:text-slate-300 mb-4">
-            You have an active subscription and can enjoy unlimited access to all features.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              className="bg-orange-500 hover:bg-orange-600"
-              onClick={() => navigate('/questionnaire')}
-            >
-              Create Mood Board
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => navigate('/mood-boards')}
-            >
-              View My Mood Boards
-            </Button>
-          </div>
-        </div>
-        
-        <Card className="border-slate-200 dark:border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-xl">Your Subscription Benefits</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-left">
-              <li className="flex items-start">
-                <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Unlimited mood boards</span>
-              </li>
-              <li className="flex items-start">
-                <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>AI-powered design suggestions</span>
-              </li>
-              <li className="flex items-start">
-                <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>High-resolution downloads</span>
-              </li>
-              <li className="flex items-start">
-                <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span>Priority support</span>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
+      <div className="max-w-4xl mx-auto text-center mb-12">
+        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Choose Your Plan</h1>
+        <p className="text-xl text-slate-600 dark:text-slate-300">Select the plan that works best for you</p>
+      </div>
+      <div className="flex flex-col md:flex-row gap-8 justify-center items-stretch">
+        {getPricingPlans().map((plan) => (
+          <Card 
+            key={plan.id}
+            className={`w-full md:w-1/2 lg:w-1/3 transition-all duration-200 ${
+              billingInterval === plan.id 
+                ? 'border-2 border-orange-500 dark:border-orange-600 scale-105' 
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+            }`}
+            onClick={() => setBillingInterval(plan.id as 'month' | 'year')}
+          >
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+              <CardDescription className="text-lg">
+                {plan.price} <span className="text-sm text-slate-500">/ {plan.id}</span>
+              </CardDescription>
+              <p className="text-sm text-slate-500">{plan.description}</p>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {plan.features.map((feature, index) => (
+                  <li key={index} className="flex items-start">
+                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter>
+              {/* Replace the Subscribe button with the Stripe payment button for non-subscribed users */}
+              <StripePaymentButton billingInterval={plan.id as 'month' | 'year'} />
+            </CardFooter>
+          </Card>
+        ))}
       </div>
     </div>
   );
