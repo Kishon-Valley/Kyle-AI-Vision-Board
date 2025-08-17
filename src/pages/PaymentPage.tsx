@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, Crown, Sparkles, ArrowRight, Palette, Download, History } from 'lucide-react';
 import StripePaymentButton from '@/components/StripePaymentButton';
 
 const getPricingPlans = () => [
@@ -34,12 +34,162 @@ const getPricingPlans = () => [
   }
 ];
 
+// New component for active subscribers
+const ActiveSubscriberView = ({ user, navigate }: { user: any; navigate: any }) => {
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="w-24 h-24 mx-auto mb-6 relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse opacity-20"></div>
+            <div className="relative w-24 h-24 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+              <Crown className="w-12 h-12 text-white" />
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
+            Welcome Back, {user?.name?.split(' ')[0] || 'Designer'}! 👋
+          </h1>
+          <p className="text-xl text-slate-600 dark:text-slate-300 mb-2">
+            You're already subscribed to our Premium plan
+          </p>
+          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full text-sm font-medium">
+            <Crown className="w-4 h-4 mr-2" />
+            Active Premium Member
+          </div>
+        </div>
+
+        {/* Subscription Benefits */}
+        <Card className="mb-8 border-2 border-yellow-200 dark:border-yellow-800 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl text-slate-800 dark:text-slate-200">
+              Your Premium Benefits
+            </CardTitle>
+            <CardDescription className="text-slate-600 dark:text-slate-300">
+              Unlock unlimited creativity with these exclusive features
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">Unlimited Mood Boards</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Create as many AI-generated designs as you want</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <Palette className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">AI-Powered Suggestions</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Get personalized design recommendations</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <Download className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">High-Resolution Downloads</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Download your designs in print-ready quality</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <History className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">Design History</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Access all your saved mood boards anytime</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group" onClick={() => navigate('/questionnaire')}>
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Sparkles className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                Create New Mood Board
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
+                Start designing your next space with AI
+              </p>
+              <Button className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600">
+                Get Started
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group" onClick={() => navigate('/history')}>
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <History className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                View Your History
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
+                Browse all your saved mood boards
+              </p>
+              <Button variant="outline" className="w-full border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                View History
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Account Management */}
+        <Card className="mt-8 border-slate-200 dark:border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-lg text-slate-800 dark:text-slate-200">
+              Account Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/profile')}
+                className="flex-1"
+              >
+                Manage Profile
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/')}
+                className="flex-1"
+              >
+                Back to Home
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
 const PaymentPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { hasSubscription, isLoading: subLoading } = useSubscription();
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const mountedRef = useRef(false);
 
@@ -52,26 +202,12 @@ const PaymentPage = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle redirect to questionnaire for users with active subscriptions
-  useEffect(() => {
-    if (isAuthenticated && hasSubscription && !isRedirecting && mountedRef.current) {
-      setIsRedirecting(true);
-      // Add a small delay to prevent rapid redirects
-      const timer = setTimeout(() => {
-        navigate('/questionnaire', { replace: true });
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, hasSubscription, navigate, isRedirecting]);
-
   // Mark component as mounted after initial render
   useEffect(() => {
     mountedRef.current = true;
   }, []);
 
   // Show loading while checking authentication and subscription status
-  // Only show loading if we're still loading AND we haven't determined the user's state yet
-  // OR if we haven't shown content yet (minimum loading time)
   const shouldShowLoading = (authLoading || subLoading) && !isAuthenticated || !showContent;
   
   if (shouldShowLoading) {
@@ -85,16 +221,9 @@ const PaymentPage = () => {
     );
   }
 
-  // If user has an active subscription, show redirecting message
-  if (isAuthenticated && hasSubscription && isRedirecting) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-          <p className="text-gray-600">Redirecting to questionnaire...</p>
-        </div>
-      </div>
-    );
+  // If user has an active subscription, show the custom subscriber page
+  if (isAuthenticated && hasSubscription) {
+    return <ActiveSubscriberView user={user} navigate={navigate} />;
   }
 
   // If user is not authenticated, show pricing plans with sign-in option
