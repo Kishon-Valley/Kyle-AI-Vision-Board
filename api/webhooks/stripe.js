@@ -59,12 +59,16 @@ export default async function handler(req, res) {
         console.log(`Processing subscription activation for user: ${userId}`);
         
         try {
+          // Ensure we only store the subscription ID, not the full object
+          const subscriptionId = session.subscription || session.id;
+          console.log('Storing subscription ID:', subscriptionId);
+          
           // Update user subscription status to active
           const { data: updateData, error: updateError } = await adminClient
             .from('users')
             .upsert({
               id: userId,
-              subscription_id: session.subscription || session.id,
+              subscription_id: subscriptionId,
               subscription_status: 'active',
               updated_at: new Date().toISOString()
             })

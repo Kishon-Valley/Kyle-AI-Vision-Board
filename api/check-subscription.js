@@ -59,11 +59,43 @@ export default async function handler(req, res) {
 
     // Check subscription status in Stripe
     let stripeStatus = 'inactive';
+    let cleanSubscriptionId = userData.subscription_id;
+    
+    // Handle case where subscription_id might be a JSON string instead of just the ID
     try {
-      if (userData.subscription_id.startsWith('sub_')) {
-        const subscription = await stripe.subscriptions.retrieve(userData.subscription_id);
+      if (userData.subscription_id.startsWith('{')) {
+        const parsedSubscription = JSON.parse(userData.subscription_id);
+        cleanSubscriptionId = parsedSubscription.id;
+        console.log('Extracted subscription ID from JSON:', cleanSubscriptionId);
+      }
+    } catch (parseError) {
+      console.log('subscription_id is not JSON, using as-is:', userData.subscription_id);
+    }
+    
+    try {
+      if (cleanSubscriptionId && cleanSubscriptionId.startsWith('sub_')) {
+        const subscription = await stripe.subscriptions.retrieve(cleanSubscriptionId);
         stripeStatus = subscription.status;
         console.log('Stripe subscription status:', stripeStatus);
+        
+        // If we successfully got the status and it's different from what's stored,
+        // update the database with the clean subscription ID
+        if (cleanSubscriptionId !== userData.subscription_id) {
+          console.log('Updating database with clean subscription ID');
+          const { error: updateError } = await adminClient
+            .from('users')
+            .update({
+              subscription_id: cleanSubscriptionId,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+          
+          if (updateError) {
+            console.error('Error updating subscription ID:', updateError);
+          } else {
+            console.log('Database updated with clean subscription ID');
+          }
+        }
       }
     } catch (stripeError) {
       console.error('Error fetching Stripe subscription:', stripeError);
@@ -115,7 +147,13 @@ export default async function handler(req, res) {
       hasSubscription: localStatus === 'active',
       subscriptionStatus: localStatus,
       stripeStatus: stripeStatus,
-      message: 'Subscription status checked and synced'
+      message: 'Subscription status checked and synced',
+      debug: {
+        originalSubscriptionId: userData.subscription_id,
+        cleanSubscriptionId: cleanSubscriptionId,
+        isJson: userData.subscription_id.startsWith('{'),
+        wasFixed: cleanSubscriptionId !== userData.subscription_id
+      }
     };
 
     console.log('Final subscription check result:', finalResult);

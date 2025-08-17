@@ -63,16 +63,28 @@ export default async function handler(req, res) {
 
     console.log(`Verifying session for user: ${userId}`);
 
-    // Get the subscription ID (either from session.subscription or session.id)
-    const subscriptionId = session.subscription || session.id;
+    // Get the subscription ID - handle both string and object cases
+    let subscriptionId;
+    let stripeStatus = 'active';
+    
+    if (typeof session.subscription === 'string') {
+      subscriptionId = session.subscription;
+    } else if (session.subscription && typeof session.subscription === 'object') {
+      subscriptionId = session.subscription.id;
+      stripeStatus = session.subscription.status;
+    } else {
+      subscriptionId = session.id;
+    }
+    
+    console.log('Extracted subscription ID:', subscriptionId);
+    console.log('Initial Stripe status:', stripeStatus);
     
     // Verify subscription status in Stripe if it's a subscription
-    let stripeStatus = 'active';
-    if (subscriptionId.startsWith('sub_')) {
+    if (subscriptionId && subscriptionId.startsWith('sub_')) {
       try {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         stripeStatus = subscription.status;
-        console.log('Stripe subscription status:', stripeStatus);
+        console.log('Verified Stripe subscription status:', stripeStatus);
         
         // If subscription is not active, return error
         if (stripeStatus !== 'active' && stripeStatus !== 'trialing') {
@@ -85,6 +97,9 @@ export default async function handler(req, res) {
       }
     }
 
+    // Ensure we only store the subscription ID string
+    console.log('Storing subscription ID in database:', subscriptionId);
+    
     // Update user subscription status in database
     const { data: updateData, error: updateError } = await adminClient
       .from('users')
