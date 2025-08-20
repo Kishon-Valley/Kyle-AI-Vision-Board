@@ -53,30 +53,6 @@ const ResultPage = () => {
           return;
         }
         
-        // Check if OpenAI API key is available
-        if (!import.meta.env.VITE_OPENAI_API_KEY) {
-          toast({
-            title: "API Key Missing",
-            description: "OpenAI API key is not configured. Using mock data instead.",
-            variant: "destructive"
-          });
-          
-          // Use mock data as fallback
-          const mockMoodBoard: MoodBoard = {
-            id: `mb_${Date.now()}`,
-            image_url: "https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=600&fit=crop",
-            description: `A stunning ${questionnaireData.designStyle} ${questionnaireData.roomType} featuring ${questionnaireData.colorPalette?.join(', ')}. This design combines comfort with style, incorporating carefully selected furniture pieces, lighting, and decor elements that reflect your personal aesthetic preferences.`,
-            style: questionnaireData.designStyle,
-            room_type: questionnaireData.roomType,
-            color_palette: questionnaireData.colorPalette,
-            budget: questionnaireData.budget
-          };
-          
-          setMoodBoard(mockMoodBoard);
-          setIsLoading(false);
-          return;
-        }
-        
         // Generate real mood board using OpenAI
         setIsGenerating(true);
         
