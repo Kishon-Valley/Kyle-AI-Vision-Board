@@ -36,37 +36,31 @@ const getPricingPlans = () => [
 
 // New component for active subscribers
 const ActiveSubscriberView = ({ user, navigate }: { user: any; navigate: any }) => {
+  const firstName = (user?.name || user?.user_metadata?.full_name || '').split(' ')[0] || 'Welcome';
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="w-24 h-24 mx-auto mb-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse opacity-20"></div>
-            <div className="relative w-24 h-24 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-              <Crown className="w-12 h-12 text-white" />
-            </div>
-          </div>
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
-            Welcome Back, {user?.name?.split(' ')[0] || 'Designer'}! 👋
+          <h1 className="text-3xl font-semibold text-slate-900 dark:text-white mb-3">
+            {firstName}, good to see you.
           </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-300 mb-2">
-            You're already subscribed to our Premium plan
+          <p className="text-slate-600 dark:text-slate-300 mb-4">
+            Your membership is active.
           </p>
-          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full text-sm font-medium">
-            <Crown className="w-4 h-4 mr-2" />
-            Active Premium Member
+          <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm">
+            <Crown className="w-4 h-4 mr-2 text-amber-500" /> Premium
           </div>
         </div>
 
         {/* Subscription Benefits */}
-        <Card className="mb-8 border-2 border-yellow-200 dark:border-yellow-800 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20">
+        <Card className="mb-8 border-slate-200 dark:border-slate-700">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-slate-800 dark:text-slate-200">
-              Your Premium Benefits
+            <CardTitle className="text-xl text-slate-800 dark:text-slate-200">
+              What’s included
             </CardTitle>
             <CardDescription className="text-slate-600 dark:text-slate-300">
-              Unlock unlimited creativity with these exclusive features
+              Tools to help you move from idea to finished space
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -77,8 +71,8 @@ const ActiveSubscriberView = ({ user, navigate }: { user: any; navigate: any }) 
                     <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">Unlimited Mood Boards</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Create as many AI-generated designs as you want</p>
+                    <h4 className="font-medium text-slate-800 dark:text-slate-200">Unlimited mood boards</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Create without limits.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -86,8 +80,8 @@ const ActiveSubscriberView = ({ user, navigate }: { user: any; navigate: any }) 
                     <Palette className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">AI-Powered Suggestions</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Get personalized design recommendations</p>
+                    <h4 className="font-medium text-slate-800 dark:text-slate-200">Smart suggestions</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Thoughtful ideas tailored to your style.</p>
                   </div>
                 </div>
               </div>
@@ -97,8 +91,8 @@ const ActiveSubscriberView = ({ user, navigate }: { user: any; navigate: any }) 
                     <Download className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">High-Resolution Downloads</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Download your designs in print-ready quality</p>
+                    <h4 className="font-medium text-slate-800 dark:text-slate-200">High‑resolution downloads</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Ready for presentations and print.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -106,8 +100,8 @@ const ActiveSubscriberView = ({ user, navigate }: { user: any; navigate: any }) 
                     <History className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">Design History</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Access all your saved mood boards anytime</p>
+                    <h4 className="font-medium text-slate-800 dark:text-slate-200">Your design library</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Every board saved and easy to find.</p>
                   </div>
                 </div>
               </div>
@@ -117,37 +111,37 @@ const ActiveSubscriberView = ({ user, navigate }: { user: any; navigate: any }) 
 
         {/* Action Buttons */}
         <div className="grid md:grid-cols-2 gap-6">
-          <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group" onClick={() => navigate('/questionnaire')}>
+          <Card className="hover:shadow-sm transition-all duration-200 cursor-pointer group" onClick={() => navigate('/questionnaire')}>
             <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <Sparkles className="w-8 h-8 text-white" />
+              <div className="w-14 h-14 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform">
+                <Sparkles className="w-7 h-7 text-slate-700 dark:text-slate-200" />
               </div>
-              <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">
-                Create New Mood Board
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                Create a new board
               </h3>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
-                Start designing your next space with AI
+                Start your next room.
               </p>
-              <Button className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600">
-                Get Started
+              <Button className="w-full">
+                Get started
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group" onClick={() => navigate('/history')}>
+          <Card className="hover:shadow-sm transition-all duration-200 cursor-pointer group" onClick={() => navigate('/history')}>
             <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <History className="w-8 h-8 text-white" />
+              <div className="w-14 h-14 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform">
+                <History className="w-7 h-7 text-slate-700 dark:text-slate-200" />
               </div>
-              <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">
-                View Your History
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                View your history
               </h3>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
-                Browse all your saved mood boards
+                Browse previous boards.
               </p>
-              <Button variant="outline" className="w-full border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                View History
+              <Button variant="outline" className="w-full">
+                View history
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>
