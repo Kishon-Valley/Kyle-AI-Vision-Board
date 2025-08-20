@@ -15,7 +15,7 @@ export async function generateDesignDescription(preferences: {
     // Use exponential backoff for API calls
     const completion = await withExponentialBackoff(
       async () => {
-        const res = await fetch('/api/openai-generate-description', {
+        const res = await fetch('/api/openai?mode=description', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ roomType, designStyle, colorPalette, budget }),
@@ -46,7 +46,7 @@ export async function generateImagePrompt(designDescription: string, preferences
     // Use exponential backoff for API calls
     const completion = await withExponentialBackoff(
       async () => {
-        const res = await fetch('/api/openai-generate-prompt', {
+        const res = await fetch('/api/openai?mode=prompt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ designDescription, roomType, designStyle }),
@@ -72,7 +72,7 @@ export async function generateMoodBoardImage(prompt: string) {
     // Use exponential backoff for API calls
     const response = await withExponentialBackoff(
       async () => {
-        const res = await fetch('/api/openai-generate-image', {
+        const res = await fetch('/api/openai?mode=image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt }),
