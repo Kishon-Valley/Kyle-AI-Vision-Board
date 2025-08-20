@@ -1,10 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+// IMPORTANT: This module is server-only. Do NOT import it in client-side code.
+// It intentionally throws in the browser to prevent accidental exposure.
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Supabase URL or service key is not defined');
+export function getServerOnlySupabaseAdmin(): never {
+  throw new Error('supabaseAdmin is server-only. Use a server API route to perform admin operations.');
 }
-
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);

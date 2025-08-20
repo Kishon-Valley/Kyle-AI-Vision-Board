@@ -10,8 +10,6 @@ interface EnvConfig {
   // Stripe configuration
   stripe: {
     publishableKey: string;
-    secretKey: string | undefined;
-    webhookSecret: string | undefined;
     priceIds: {
       monthly: string;
       yearly: string;
@@ -23,10 +21,6 @@ interface EnvConfig {
   supabase: {
     url: string | undefined;
     anonKey: string | undefined;
-    serviceKey: string | undefined;
-  };
-  openai: {
-    apiKey: string | undefined;
   };
   allowedOrigins: string[];
 }
@@ -40,8 +34,6 @@ export const env: EnvConfig = {
   // Stripe configuration
   stripe: {
     publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
-    secretKey: process.env.STRIPE_SECRET_KEY,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     priceIds: {
       monthly: import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY || '',
       yearly: import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY || '',
@@ -50,8 +42,6 @@ export const env: EnvConfig = {
     get isConfigured() {
       return Boolean(
         this.publishableKey &&
-        this.secretKey &&
-        this.webhookSecret &&
         this.priceIds.monthly &&
         this.priceIds.yearly
       );
@@ -62,12 +52,6 @@ export const env: EnvConfig = {
   supabase: {
     url: import.meta.env.VITE_SUPABASE_URL || '',
     anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-    serviceKey: process.env.SUPABASE_SERVICE_KEY || '',
-  },
-  
-  // OpenAI configuration
-  openai: {
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
   },
   
   // CORS and security
@@ -97,19 +81,6 @@ export function validateEnvironment() {
   }
   if (!env.supabase.anonKey) {
     errors.push('SUPABASE_ANON_KEY is missing');
-  }
-
-  // Validate required server-side variables
-  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
-    if (!env.stripe.secretKey) {
-      errors.push('STRIPE_SECRET_KEY is missing');
-    }
-    if (!env.stripe.webhookSecret) {
-      errors.push('STRIPE_WEBHOOK_SECRET is missing');
-    }
-    if (!env.supabase.serviceKey) {
-      errors.push('SUPABASE_SERVICE_KEY is missing');
-    }
   }
 
   if (errors.length > 0) {
