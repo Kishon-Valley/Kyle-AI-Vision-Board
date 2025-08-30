@@ -86,12 +86,32 @@ export const useImageUsage = () => {
     checkImageUsage();
   }, [checkImageUsage]);
 
+  // Add a retry mechanism for when subscription status changes
+  useEffect(() => {
+    if (user && isAuthenticated) {
+      // Add a small delay to allow subscription data to sync
+      const timer = setTimeout(() => {
+        checkImageUsage();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user?.id, isAuthenticated]);
+
+  // Refresh image usage when subscription status changes
+  const refreshImageUsage = useCallback(async () => {
+    if (user && isAuthenticated) {
+      await checkImageUsage();
+    }
+  }, [user, isAuthenticated, checkImageUsage]);
+
   return {
     imageUsage,
     isLoading,
     error,
     checkImageUsage,
     incrementImageUsage,
+    refreshImageUsage,
     canGenerateImage: imageUsage?.canGenerateImage ?? false,
     remainingImages: imageUsage?.remainingImages ?? 0,
     imagesUsed: imageUsage?.imagesUsed ?? 0,

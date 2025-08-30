@@ -22,11 +22,12 @@ interface FormData {
 
 const QuestionnairePage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { hasSubscription, isLoading: isSubLoading, checkSubscription } = useSubscription();
   const { canGenerateImage, remainingImages, imagesLimit, isLoading: isImageLoading } = useImageUsage();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
+  const [hasShownError, setHasShownError] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     roomType: '',
     designStyle: '',
@@ -36,11 +37,14 @@ const QuestionnairePage = () => {
 
   // Check authentication, subscription status, and image usage
   useEffect(() => {
+    // Don't redirect while loading
     if (isSubLoading || isImageLoading) {
-      // Wait until subscription and image usage status have finished loading
       return;
     }
-    if (!isAuthenticated) {
+
+    // Check authentication first
+    if (!isAuthenticated && !hasShownError) {
+      setHasShownError(true);
       toast({
         title: 'Sign Up Required',
         description: 'Please sign up or log in to create a mood board.',
@@ -50,7 +54,9 @@ const QuestionnairePage = () => {
       return;
     }
 
-    if (!hasSubscription) {
+    // Check subscription status
+    if (!hasSubscription && !hasShownError) {
+      setHasShownError(true);
       toast({
         title: 'Subscription Required',
         description: 'Please subscribe to create a mood board.',
@@ -60,15 +66,30 @@ const QuestionnairePage = () => {
       return;
     }
 
-    if (!canGenerateImage) {
+    // Only check image usage if user has a subscription and we have valid data
+    if (hasSubscription && imagesLimit > 0 && !canGenerateImage && !hasShownError) {
+      setHasShownError(true);
       toast({
         title: 'Image Limit Reached',
         description: `You've used all ${imagesLimit} images for this month. Upgrade your plan for more images.`,
         variant: 'destructive'
       });
       navigate('/pricing');
+      return;
     }
-  }, [isAuthenticated, hasSubscription, canGenerateImage, isSubLoading, isImageLoading, imagesLimit, navigate, toast]);
+
+    // If user has subscription but imagesLimit is 0, it might be a data sync issue
+    // Don't redirect in this case, let the user proceed
+    // Reset error flag if everything is good
+    if (hasSubscription && canGenerateImage) {
+      setHasShownError(false);
+    }
+  }, [isAuthenticated, hasSubscription, canGenerateImage, isSubLoading, isImageLoading, imagesLimit, navigate, toast, hasShownError]);
+
+  // Reset error flag when user changes
+  useEffect(() => {
+    setHasShownError(false);
+  }, [user?.id]);
 
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;

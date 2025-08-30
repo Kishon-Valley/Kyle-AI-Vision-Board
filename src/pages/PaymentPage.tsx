@@ -205,7 +205,7 @@ const ActiveSubscriberView = ({ user, navigate }: { user: any; navigate: any }) 
 const PaymentPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
-  const { hasSubscription, isLoading: subLoading } = useSubscription();
+  const { hasSubscription, isLoading: subLoading, refreshSubscription } = useSubscription();
   const [billingInterval, setBillingInterval] = useState<'basic' | 'pro' | 'yearly'>('basic');
   const [showContent, setShowContent] = useState(false);
   const mountedRef = useRef(false);
@@ -223,6 +223,18 @@ const PaymentPage = () => {
   useEffect(() => {
     mountedRef.current = true;
   }, []);
+
+  // Refresh subscription data when component mounts (useful after payment)
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Add a delay to allow webhook processing
+      const timer = setTimeout(() => {
+        refreshSubscription();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, user, refreshSubscription]);
 
   // Show loading while checking authentication and subscription status
   const shouldShowLoading = (authLoading || subLoading) && !isAuthenticated || !showContent;
