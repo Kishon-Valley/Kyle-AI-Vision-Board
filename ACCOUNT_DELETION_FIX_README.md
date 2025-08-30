@@ -44,6 +44,7 @@ The `api/delete-account.js` has been enhanced with:
 - **Retry mechanism**: Attempts auth user deletion again after cleanup
 - **Verification**: Checks if cleanup was successful
 - **Storage cleanup**: Removes both user uploads and profile images
+- **Consolidated cleanup operations**: Includes orphaned record checking and cleanup (stays within 12-function limit)
 
 ### 3. Frontend Component Updates
 
@@ -55,10 +56,10 @@ The `UserProfile.tsx` component now:
 
 ### 4. Admin Cleanup Utility
 
-New components and APIs for database maintenance:
+New components for database maintenance:
 
-- **`api/cleanup-orphaned-records.js`**: API endpoint to check and clean orphaned records
 - **`AdminCleanup.tsx`**: React component for admin use to manage database cleanup
+- **Consolidated API**: Uses the same `delete-account` endpoint for both deletion and cleanup operations
 
 ## Implementation Steps
 
@@ -69,8 +70,7 @@ psql -h your-supabase-host -U postgres -d postgres -f Supabase/supabase_fix_acco
 ```
 
 ### Step 2: Deploy Updated API Endpoints
-- Update `api/delete-account.js`
-- Deploy `api/cleanup-orphaned-records.js`
+- Update `api/delete-account.js` (now includes cleanup functionality)
 
 ### Step 3: Update Frontend Components
 - Update `src/pages/UserProfile.tsx`
@@ -95,14 +95,14 @@ Use the admin cleanup utility to check for orphaned records:
 
 ```javascript
 // Check for orphaned records
-fetch('/api/cleanup-orphaned-records', {
+fetch('/api/delete-account', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ action: 'check' })
 });
 
 // Clean up if needed
-fetch('/api/cleanup-orphaned-records', {
+fetch('/api/delete-account', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ action: 'cleanup' })
@@ -183,6 +183,19 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
 - **Audit Logging**: All deletion operations are logged for security purposes
 - **Data Validation**: Verification steps ensure complete cleanup
 
+## Vercel Deployment Considerations
+
+### Function Limit Compliance
+- **Hobby Plan**: Limited to 12 serverless functions
+- **Consolidated Approach**: Cleanup functionality integrated into existing `delete-account` API
+- **No Additional Functions**: Stays within the 12-function limit
+
+### Alternative Solutions
+If you need more functions in the future:
+1. **Upgrade to Pro Plan**: Allows unlimited serverless functions
+2. **Consolidate More APIs**: Combine related functionality into single endpoints
+3. **Use Edge Functions**: Some operations can be moved to Edge Functions (different limit)
+
 ## Conclusion
 
 This comprehensive solution addresses the root causes of account deletion failures:
@@ -191,5 +204,6 @@ This comprehensive solution addresses the root causes of account deletion failur
 2. **Improved deletion process** with better error handling
 3. **Added cleanup utilities** for maintenance and troubleshooting
 4. **Enhanced monitoring** to prevent future issues
+5. **Stays within Vercel Hobby plan limits** through API consolidation
 
 The solution ensures that users can successfully delete their accounts and re-register without encountering authentication errors, while maintaining data integrity and providing tools for ongoing database maintenance.

@@ -20,7 +20,7 @@ const AdminCleanup = () => {
   const checkOrphanedRecords = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/cleanup-orphaned-records', {
+      const response = await fetch('/api/delete-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'check' }),
@@ -78,7 +78,7 @@ const AdminCleanup = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/cleanup-orphaned-records', {
+      const response = await fetch('/api/delete-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'cleanup' }),

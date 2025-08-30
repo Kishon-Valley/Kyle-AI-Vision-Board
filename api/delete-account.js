@@ -10,8 +10,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId } = req.body;
+    const { userId, action } = req.body;
     
+    // Support both account deletion and cleanup operations
+    if (action === 'cleanup' || action === 'check') {
+      return await handleCleanupOperations(req, res, action);
+    }
+    
+    // Default action: delete account
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
     }
@@ -160,6 +166,151 @@ export default async function handler(req, res) {
     
   } catch (error) {
     console.error('Error in delete-account:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
+}
+
+// Helper function to handle cleanup operations
+async function handleCleanupOperations(req, res, action) {
+  try {
+    if (action === 'check') {
+      // Check for orphaned records across all tables
+      const orphanedRecords = {};
+      
+      try {
+        // Check profiles table
+        const { data: orphanedProfiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id')
+          .not('id', 'in', `(SELECT id FROM auth.users)`);
+        
+        if (!profilesError && orphanedProfiles) {
+          orphanedRecords.profiles = orphanedProfiles.length;
+        }
+
+        // Check users table
+        const { data: orphanedUsers, error: usersError } = await supabase
+          .from('users')
+          .select('id')
+          .not('id', 'in', `(SELECT id FROM auth.users)`);
+        
+        if (!usersError && orphanedUsers) {
+          orphanedRecords.users = orphanedUsers.length;
+        }
+
+        // Check mood_boards table
+        const { data: orphanedMoodBoards, error: moodBoardsError } = await supabase
+          .from('mood_boards')
+          .select('id')
+          .not('user_id', 'in', `(SELECT id FROM auth.users)`);
+        
+        if (!moodBoardsError && orphanedMoodBoards) {
+          orphanedRecords.mood_boards = orphanedMoodBoards.length;
+        }
+
+        // Check user_preferences table if it exists
+        try {
+          const { data: orphanedPreferences, error: preferencesError } = await supabase
+            .from('user_preferences')
+            .select('id')
+            .not('user_id', 'in', `(SELECT id FROM auth.users)`);
+          
+          if (!preferencesError && orphanedPreferences) {
+            orphanedRecords.user_preferences = orphanedPreferences.length;
+          }
+        } catch (tableError) {
+          // Table might not exist, which is fine
+          orphanedRecords.user_preferences = 'table_not_found';
+        }
+
+        return res.status(200).json({
+          success: true,
+          orphanedRecords,
+          message: 'Orphaned records check completed'
+        });
+
+      } catch (checkError) {
+        console.error('Error checking orphaned records:', checkError);
+        return res.status(500).json({ 
+          error: 'Failed to check orphaned records',
+          details: checkError.message 
+        });
+      }
+
+    } else if (action === 'cleanup') {
+      // Clean up all orphaned records
+      let totalCleaned = 0;
+      
+      try {
+        // Clean up orphaned profiles
+        const { error: profilesError } = await supabase
+          .from('profiles')
+          .delete()
+          .not('id', 'in', `(SELECT id FROM auth.users)`);
+        
+        if (!profilesError) {
+          console.log('Cleaned up orphaned profiles');
+          totalCleaned++;
+        }
+
+        // Clean up orphaned users table records
+        const { error: usersError } = await supabase
+          .from('users')
+          .delete()
+          .not('id', 'in', `(SELECT id FROM auth.users)`);
+        
+        if (!usersError) {
+          console.log('Cleaned up orphaned users records');
+          totalCleaned++;
+        }
+
+        // Clean up orphaned mood boards
+        const { error: moodBoardsError } = await supabase
+          .from('mood_boards')
+          .delete()
+          .not('user_id', 'in', `(SELECT id FROM auth.users)`);
+        
+        if (!moodBoardsError) {
+          console.log('Cleaned up orphaned mood boards');
+          totalCleaned++;
+        }
+
+        // Clean up orphaned user preferences if table exists
+        try {
+          const { error: preferencesError } = await supabase
+            .from('user_preferences')
+            .delete()
+            .not('user_id', 'in', `(SELECT id FROM auth.users)`);
+          
+          if (!preferencesError) {
+            console.log('Cleaned up orphaned user preferences');
+            totalCleaned++;
+          }
+        } catch (tableError) {
+          // Table might not exist, which is fine
+          console.log('user_preferences table not found, skipping');
+        }
+
+        return res.status(200).json({
+          success: true,
+          totalCleaned,
+          message: `Cleanup completed. ${totalCleaned} table cleanups performed.`
+        });
+
+      } catch (cleanupError) {
+        console.error('Error during cleanup:', cleanupError);
+        return res.status(500).json({ 
+          error: 'Failed to cleanup orphaned records',
+          details: cleanupError.message 
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error('Error in cleanup operations:', error);
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error.message 
