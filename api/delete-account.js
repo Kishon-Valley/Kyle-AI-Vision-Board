@@ -1,9 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -16,36 +12,70 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    // 1. Delete user data from storage
-    const { data: files, error: listError } = await supabase.storage
-      .from('user-uploads')
-      .list(userId);
-
-    if (!listError && files?.length > 0) {
-      const filesToRemove = files.map((file) => `${userId}/${file.name}`);
-      const { error: removeError } = await supabase.storage
-        .from('user-uploads')
-        .remove(filesToRemove);
-
-      if (removeError) {
-        console.error('Error removing user files:', removeError);
+    // Initialize Supabase with service role
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
       }
-    }
+    );
 
-    // 2. Delete from database tables
-    const tables = ['profiles', 'mood_boards', 'user_preferences']; // Add all your tables
-    for (const table of tables) {
-      const { error } = await supabase
-        .from(table)
-        .delete()
+    // 1. Cancel any active subscription first
+    try {
+      const { error: subError } = await supabase
+        .from('subscriptions')
+        .update({ status: 'canceled' })
         .eq('user_id', userId);
-      
-      if (error) {
-        console.error(`Error deleting from ${table}:`, error);
+
+      if (subError) throw subError;
+    } catch (subError) {
+      console.error('Error canceling subscription:', subError);
+      // Continue with account deletion even if subscription cancellation fails
+    }
+
+    // 2. Delete user data from storage
+    try {
+      const { data: files, error: listError } = await supabase.storage
+        .from('user-uploads')
+        .list(userId);
+
+      if (!listError && files?.length > 0) {
+        const filesToRemove = files.map((file) => `${userId}/${file.name}`);
+        const { error: removeError } = await supabase.storage
+          .from('user-uploads')
+          .remove(filesToRemove);
+
+        if (removeError) {
+          console.error('Error removing user files:', removeError);
+        }
+      }
+    } catch (storageError) {
+      console.error('Storage cleanup error:', storageError);
+      // Continue with account deletion even if storage cleanup fails
+    }
+
+    // 3. Delete from database tables
+    const tables = ['profiles', 'mood_boards', 'user_preferences'];
+    for (const table of tables) {
+      try {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq('user_id', userId);
+        
+        if (error) {
+          console.error(`Error deleting from ${table}:`, error);
+        }
+      } catch (dbError) {
+        console.error(`Database error for table ${table}:`, dbError);
       }
     }
 
-    // 3. Delete auth user (requires admin client)
+    // 4. Delete auth user (requires admin client)
     const { error: authError } = await supabase.auth.admin.deleteUser(userId);
     if (authError) {
       console.error('Error deleting auth user:', authError);
