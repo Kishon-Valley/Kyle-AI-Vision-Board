@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -7,35 +11,64 @@ export default async function handler(req, res) {
 
   try {
     const { userId } = req.body;
-
+    
     if (!userId) {
-      return res.status(400).json({ error: 'Missing userId' });
+      return res.status(400).json({ error: 'User ID is required' });
     }
 
-    // Guard against missing backend credentials
-    if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-      console.error('Supabase admin credentials are not configured.');
-      return res.status(500).json({ error: 'Server mis-configuration' });
+    // 1. Delete user data from storage
+    const { data: files, error: listError } = await supabase.storage
+      .from('user-uploads')
+      .list(userId);
+
+    if (!listError && files?.length > 0) {
+      const filesToRemove = files.map((file) => `${userId}/${file.name}`);
+      const { error: removeError } = await supabase.storage
+        .from('user-uploads')
+        .remove(filesToRemove);
+
+      if (removeError) {
+        console.error('Error removing user files:', removeError);
+      }
     }
 
-    // Admin client (service role) – NEVER expose service key to the client bundle
-    const adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    // 2. Delete from database tables
+    const tables = ['profiles', 'mood_boards', 'user_preferences']; // Add all your tables
+    for (const table of tables) {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error(`Error deleting from ${table}:`, error);
+      }
+    }
 
-    const { error } = await adminClient.auth.admin.deleteUser(userId, true);
-
-    if (error) {
-      console.error('Error deleting user via admin API:', error);
-      return res.status(500).json({ error: error.message });
+    // 3. Delete auth user (requires admin client)
+    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+    if (authError) {
+      console.error('Error deleting auth user:', authError);
+      return res.status(500).json({ 
+        error: 'Failed to delete user account',
+        details: authError.message 
+      });
     }
 
     return res.status(200).json({ success: true });
-  } catch (err) {
-    console.error('Unhandled error in delete-account route:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+  } catch (error) {
+    console.error('Error in delete-account:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '1mb',
+    },
+  },
+};
