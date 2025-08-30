@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     console.log(`Processing webhook event: ${event.type}`);
 
     // Initialize Supabase admin client
-    const adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+    const adminClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,

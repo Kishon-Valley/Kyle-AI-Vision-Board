@@ -19,13 +19,13 @@ export default async function handler(req, res) {
     console.log(`${action}ing image usage for user: ${userId}`);
 
     // Guard against missing backend credentials
-    if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
       console.error('Supabase admin credentials are not configured.');
       return res.status(500).json({ error: 'Server mis-configuration' });
     }
 
     // Admin client (service role) – NEVER expose service key to the client bundle
-    const adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+    const adminClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,

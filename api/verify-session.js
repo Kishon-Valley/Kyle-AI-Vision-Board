@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     }
 
     // Guard against missing backend credentials
-    if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
       console.error('Supabase admin credentials are not configured.');
       return res.status(500).json({ error: 'Server mis-configuration' });
     }
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     });
 
     // Admin client (service role) – NEVER expose service key to the client bundle
-    const adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+    const adminClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -100,13 +100,39 @@ export default async function handler(req, res) {
     // Ensure we only store the subscription ID string
     console.log('Storing subscription ID in database:', subscriptionId);
     
-    // Update user subscription status in database
+    // Determine subscription tier and image limits based on metadata
+    const billingInterval = session.metadata?.billing_interval;
+    let subscriptionTier = 'basic';
+    let imagesLimitPerMonth = 3;
+    switch (billingInterval) {
+      case 'basic':
+        subscriptionTier = 'basic';
+        imagesLimitPerMonth = 3;
+        break;
+      case 'pro':
+        subscriptionTier = 'pro';
+        imagesLimitPerMonth = 25;
+        break;
+      case 'yearly':
+        subscriptionTier = 'yearly';
+        imagesLimitPerMonth = 25;
+        break;
+      default:
+        subscriptionTier = 'basic';
+        imagesLimitPerMonth = 3;
+    }
+
+    // Update user subscription status and limits in database
     const { data: updateData, error: updateError } = await adminClient
       .from('users')
       .upsert({
         id: userId,
         subscription_id: subscriptionId,
         subscription_status: 'active',
+        subscription_tier: subscriptionTier,
+        images_limit_per_month: imagesLimitPerMonth,
+        images_used_this_month: 0,
+        last_reset_date: new Date().toISOString().split('T')[0],
         updated_at: new Date().toISOString()
       })
       .select();
