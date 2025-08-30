@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
     // Get user's subscription and usage data
     const { data: userData, error: userError } = await adminClient
       .from('users')
-      .select('subscription_tier, subscription_status, images_used_this_month, images_limit_per_month, last_reset_date')
+      .select('subscription_tier, subscription_status, images_used_this_month, images_limit_per_month, last_reset_date, subscription_id')
       .eq('id', userId)
       .single();
 
@@ -46,6 +47,51 @@ export default async function handler(req, res) {
 
     if (!userData) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Fix subscription tier if it's wrong (free tier with active subscription)
+    if (userData.subscription_status === 'active' && userData.subscription_tier === 'free' && userData.subscription_id) {
+      try {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+          apiVersion: '2025-07-30.basil',
+        });
+
+        const subscription = await stripe.subscriptions.retrieve(userData.subscription_id);
+        const priceId = subscription.items.data[0]?.price?.id;
+        
+        let correctTier = 'basic';
+        let correctImageLimit = 3;
+        
+        if (priceId === process.env.VITE_STRIPE_PRICE_ID_BASIC) {
+          correctTier = 'basic';
+          correctImageLimit = 3;
+        } else if (priceId === process.env.VITE_STRIPE_PRICE_ID_PRO) {
+          correctTier = 'pro';
+          correctImageLimit = 25;
+        } else if (priceId === process.env.VITE_STRIPE_PRICE_ID_YEARLY) {
+          correctTier = 'yearly';
+          correctImageLimit = 50;
+        }
+
+        // Update the database with correct tier and image limit
+        const { error: updateError } = await adminClient
+          .from('users')
+          .update({
+            subscription_tier: correctTier,
+            images_limit_per_month: correctImageLimit,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
+
+        if (!updateError) {
+          console.log(`Fixed subscription tier for user ${userId}: ${userData.subscription_tier} -> ${correctTier}, images: ${userData.images_limit_per_month} -> ${correctImageLimit}`);
+          userData.subscription_tier = correctTier;
+          userData.images_limit_per_month = correctImageLimit;
+        }
+      } catch (stripeError) {
+        console.error('Error fixing subscription tier:', stripeError);
+        // Continue with existing data if Stripe check fails
+      }
     }
 
     // Check if we need to reset monthly usage
