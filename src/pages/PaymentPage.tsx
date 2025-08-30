@@ -45,7 +45,7 @@ const getPricingPlans = () => [
     tier: 'yearly',
     imagesPerMonth: 50,
     features: [
-      '25 AI-generated mood boards per month',
+      '50 AI-generated mood boards per month',
       'AI-powered design suggestions',
       'High-resolution downloads',
       'Priority support',
