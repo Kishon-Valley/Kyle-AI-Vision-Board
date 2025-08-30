@@ -12,8 +12,10 @@ BEGIN
   END IF;
 END $$;
 
--- Update the subscription_tier column to use the enum
+-- Remove the default value first, then change the type, then add the default back
+ALTER TABLE public.users ALTER COLUMN subscription_tier DROP DEFAULT;
 ALTER TABLE public.users ALTER COLUMN subscription_tier TYPE subscription_tier_enum USING subscription_tier::subscription_tier_enum;
+ALTER TABLE public.users ALTER COLUMN subscription_tier SET DEFAULT 'free'::subscription_tier_enum;
 
 -- Create a function to reset monthly image usage
 CREATE OR REPLACE FUNCTION reset_monthly_image_usage()

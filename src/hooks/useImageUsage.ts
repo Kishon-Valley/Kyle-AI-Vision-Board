@@ -27,10 +27,10 @@ export const useImageUsage = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/check-image-usage', {
+      const response = await fetch('/api/image-usage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, action: 'check' }),
       });
 
       if (response.ok) {
@@ -54,10 +54,10 @@ export const useImageUsage = () => {
     }
 
     try {
-      const response = await fetch('/api/increment-image-usage', {
+      const response = await fetch('/api/image-usage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, action: 'increment' }),
       });
 
       if (response.ok) {
