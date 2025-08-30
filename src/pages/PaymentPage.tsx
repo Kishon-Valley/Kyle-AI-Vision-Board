@@ -43,7 +43,7 @@ const getPricingPlans = () => [
     price: '$29.99',
     description: 'Billed annually (Save 50%!)',
     tier: 'yearly',
-    imagesPerMonth: 25,
+    imagesPerMonth: 50,
     features: [
       '25 AI-generated mood boards per month',
       'AI-powered design suggestions',
