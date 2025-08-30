@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     console.log(`Processing webhook event: ${event.type}`);
 
     // Initialize Supabase admin client
-    const adminClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+    const adminClient = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -63,28 +63,69 @@ export default async function handler(req, res) {
           const subscriptionId = session.subscription || session.id;
           console.log('Storing subscription ID:', subscriptionId);
           
-          // Determine tier and image limits based on billing interval
-          const billingInterval = session.metadata?.billing_interval;
+          // Determine tier and image limits based on Stripe price ID
           let subscriptionTier = 'basic';
           let imagesLimitPerMonth = 3;
           
-          switch (billingInterval) {
-            case 'basic':
-              subscriptionTier = 'basic';
-              imagesLimitPerMonth = 3;
-              break;
-            case 'pro':
-              subscriptionTier = 'pro';
-              imagesLimitPerMonth = 25;
-              break;
-            case 'yearly':
-              subscriptionTier = 'yearly';
-              imagesLimitPerMonth = 25;
-              break;
-            default:
-              // Fallback to basic if billing interval is not specified
-              subscriptionTier = 'basic';
-              imagesLimitPerMonth = 3;
+          // Get the subscription details to determine the correct tier
+          if (session.subscription) {
+            try {
+              const subscription = await stripe.subscriptions.retrieve(session.subscription);
+              const priceId = subscription.items.data[0]?.price?.id;
+              
+              if (priceId === process.env.VITE_STRIPE_PRICE_ID_BASIC) {
+                subscriptionTier = 'basic';
+                imagesLimitPerMonth = 3;
+              } else if (priceId === process.env.VITE_STRIPE_PRICE_ID_PRO) {
+                subscriptionTier = 'pro';
+                imagesLimitPerMonth = 25;
+              } else if (priceId === process.env.VITE_STRIPE_PRICE_ID_YEARLY) {
+                subscriptionTier = 'yearly';
+                imagesLimitPerMonth = 50;
+              } else {
+                // Fallback: try to determine from billing interval metadata
+                const billingInterval = session.metadata?.billing_interval;
+                switch (billingInterval) {
+                  case 'basic':
+                    subscriptionTier = 'basic';
+                    imagesLimitPerMonth = 3;
+                    break;
+                  case 'pro':
+                    subscriptionTier = 'pro';
+                    imagesLimitPerMonth = 25;
+                    break;
+                  case 'yearly':
+                    subscriptionTier = 'yearly';
+                    imagesLimitPerMonth = 50;
+                    break;
+                  default:
+                    // Fallback to basic if billing interval is not specified
+                    subscriptionTier = 'basic';
+                    imagesLimitPerMonth = 3;
+                }
+              }
+            } catch (error) {
+              console.error('Error retrieving subscription details:', error);
+              // Fallback to metadata-based determination
+              const billingInterval = session.metadata?.billing_interval;
+              switch (billingInterval) {
+                case 'basic':
+                  subscriptionTier = 'basic';
+                  imagesLimitPerMonth = 3;
+                  break;
+                case 'pro':
+                  subscriptionTier = 'pro';
+                  imagesLimitPerMonth = 25;
+                  break;
+                case 'yearly':
+                  subscriptionTier = 'yearly';
+                  imagesLimitPerMonth = 50;
+                  break;
+                default:
+                  subscriptionTier = 'basic';
+                  imagesLimitPerMonth = 3;
+              }
+            }
           }
           
           // Update user subscription status to active with tier information
