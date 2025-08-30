@@ -189,10 +189,10 @@ const AdminCleanup = () => {
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                 <div className="text-sm text-slate-600 dark:text-slate-400">User Preferences</div>
                 <div className="text-lg font-semibold">
-                  {typeof orphanedRecords.user_preferences === 'number' 
-                    ? orphanedRecords.user_preferences 
-                    : orphanedRecords.user_preferences === 'table_not_found' 
-                      ? 'N/A' 
+                  {orphanedRecords.user_preferences === 'table_not_found' 
+                    ? 'N/A' 
+                    : typeof orphanedRecords.user_preferences === 'number' 
+                      ? orphanedRecords.user_preferences 
                       : 'N/A'
                   }
                 </div>

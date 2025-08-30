@@ -61,11 +61,10 @@ export default async function handler(req, res) {
     }
 
     // 2. Delete from database tables in correct order (children first, then parents)
-    // Tables with foreign key references to auth.users should be deleted first
+    // Only include tables that actually exist in your database
     const tablesToDelete = [
       { table: 'mood_boards', column: 'user_id' },
-      { table: 'user_preferences', column: 'user_id' },
-      // These tables reference auth.users(id) directly, so we need to handle them carefully
+      // Remove user_preferences since it doesn't exist in your database
       { table: 'profiles', column: 'id' },
       { table: 'users', column: 'id' },
     ];
@@ -211,20 +210,8 @@ async function handleCleanupOperations(req, res, action) {
           orphanedRecords.mood_boards = orphanedMoodBoards.length;
         }
 
-        // Check user_preferences table if it exists
-        try {
-          const { data: orphanedPreferences, error: preferencesError } = await supabase
-            .from('user_preferences')
-            .select('id')
-            .not('user_id', 'in', `(SELECT id FROM auth.users)`);
-          
-          if (!preferencesError && orphanedPreferences) {
-            orphanedRecords.user_preferences = orphanedPreferences.length;
-          }
-        } catch (tableError) {
-          // Table might not exist, which is fine
-          orphanedRecords.user_preferences = 'table_not_found';
-        }
+        // Don't check user_preferences since the table doesn't exist
+        orphanedRecords.user_preferences = 'table_not_found';
 
         return res.status(200).json({
           success: true,
@@ -278,21 +265,8 @@ async function handleCleanupOperations(req, res, action) {
           totalCleaned++;
         }
 
-        // Clean up orphaned user preferences if table exists
-        try {
-          const { error: preferencesError } = await supabase
-            .from('user_preferences')
-            .delete()
-            .not('user_id', 'in', `(SELECT id FROM auth.users)`);
-          
-          if (!preferencesError) {
-            console.log('Cleaned up orphaned user preferences');
-            totalCleaned++;
-          }
-        } catch (tableError) {
-          // Table might not exist, which is fine
-          console.log('user_preferences table not found, skipping');
-        }
+        // Skip user_preferences cleanup since the table doesn't exist
+        console.log('user_preferences table not found, skipping');
 
         return res.status(200).json({
           success: true,
