@@ -311,24 +311,24 @@ const UserProfile = () => {
       if (accountType === 'premium') {
         try {
           const response = await fetch('/api/cancel-subscription', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: user.id }),
-        });
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: user.id }),
+          });
 
-        if (!response.ok) {
-          let errorMessage = 'Failed to cancel subscription';
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch (parseError) {
-            // If JSON parsing fails, use the status text
-            errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
+          if (!response.ok) {
+            let errorMessage = 'Failed to cancel subscription';
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.error || errorMessage;
+            } catch (parseError) {
+              // If JSON parsing fails, use the status text
+              errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
           }
-          throw new Error(errorMessage);
-        }
           
         } catch (subError) {
           console.error('Error in subscription cancellation:', subError);
@@ -336,44 +336,7 @@ const UserProfile = () => {
         }
       }
 
-      // Step 2: Delete all user-related data from storage and database tables
-      await deleteAllUserMoodBoards(user.id);
-
-      if (avatarUrl) {
-        try {
-          const avatarPath = avatarUrl.split('/').pop();
-          if (avatarPath) {
-            const { error: storageError } = await supabase.storage
-              .from('profile-images')
-              .remove([avatarPath]);
-            if (storageError) {
-              console.warn('Failed to delete profile image during cleanup:', storageError);
-            }
-          }
-        } catch (storageError) {
-          console.warn('Error deleting profile image during cleanup:', storageError);
-        }
-      }
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id);
-      
-      if (profileError) {
-        console.warn('Failed to delete profile data during cleanup:', profileError);
-      }
-
-      const { error: userTableError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', user.id);
-
-      if (userTableError) {
-        console.warn('Failed to delete user data from users table during cleanup:', userTableError);
-      }
-
-      // Step 3: After cleanup, delete the auth user via the API endpoint
+      // Step 2: Use the improved delete-account API which handles all cleanup
       const deleteUserResponse = await fetch('/api/delete-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -381,24 +344,32 @@ const UserProfile = () => {
       });
 
       if (!deleteUserResponse.ok) {
-        let errorMessage = 'Failed to delete user';
+        let errorMessage = 'Failed to delete user account';
         try {
           const errorData = await deleteUserResponse.json();
           errorMessage = errorData.error || errorMessage;
+          if (errorData.details) {
+            errorMessage += `: ${errorData.details}`;
+          }
         } catch (parseError) {
           // If JSON parsing fails, use the status text
           errorMessage = `${errorMessage}: ${deleteUserResponse.status} ${deleteUserResponse.statusText}`;
         }
         throw new Error(errorMessage);
       }
-      
-      // Step 4: Sign out to clear the session and notify the user
+
+      const deleteResult = await deleteUserResponse.json();
+      console.log('Account deletion result:', deleteResult);
+
+      // Step 3: Sign out to clear the session
       await supabase.auth.signOut();
+      
       toast({
         title: 'Account Deleted',
         description: 'Your account and all associated data have been permanently deleted.',
       });
 
+      // Step 4: Navigate to home page
       navigate('/', { replace: true });
 
     } catch (error) {
