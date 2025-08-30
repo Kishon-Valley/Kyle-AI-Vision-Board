@@ -63,10 +63,7 @@ BEGIN
     -- Delete from mood_boards (should cascade automatically)
     DELETE FROM public.mood_boards WHERE user_id = user_uuid;
     
-    -- Delete from user_preferences if table exists
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_preferences') THEN
-      DELETE FROM public.user_preferences WHERE user_id = user_uuid;
-    END IF;
+    -- Note: user_preferences table doesn't exist in this database, so we skip it
     
     -- Delete from profiles (will cascade from auth.users deletion)
     DELETE FROM public.profiles WHERE id = user_uuid;
@@ -104,10 +101,7 @@ BEGIN
     -- Clean up orphaned mood boards
     DELETE FROM public.mood_boards WHERE user_id = OLD.id;
     
-    -- Clean up orphaned user preferences if table exists
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_preferences') THEN
-      DELETE FROM public.user_preferences WHERE user_id = OLD.id;
-    END IF;
+    -- Note: user_preferences table doesn't exist in this database, so we skip it
   END IF;
   
   RETURN COALESCE(NEW, OLD);
@@ -182,13 +176,7 @@ BEGIN
   GET DIAGNOSTICS cleaned = ROW_COUNT;
   total_cleaned := total_cleaned + cleaned;
   
-  -- Clean up orphaned user preferences if table exists
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_preferences') THEN
-    DELETE FROM public.user_preferences 
-    WHERE user_id NOT IN (SELECT id FROM auth.users);
-    GET DIAGNOSTICS cleaned = ROW_COUNT;
-    total_cleaned := total_cleaned + cleaned;
-  END IF;
+  -- Note: user_preferences table doesn't exist in this database, so we skip it
   
   RETURN total_cleaned;
 END;
@@ -204,4 +192,5 @@ BEGIN
   RAISE LOG 'Foreign key constraints updated with CASCADE DELETE';
   RAISE LOG 'Cleanup functions and triggers created';
   RAISE LOG 'Indexes created for better performance';
+  RAISE LOG 'Note: user_preferences table references removed (table does not exist)';
 END $$;

@@ -64,7 +64,6 @@ export default async function handler(req, res) {
     // Only include tables that actually exist in your database
     const tablesToDelete = [
       { table: 'mood_boards', column: 'user_id' },
-      // Remove user_preferences since it doesn't exist in your database
       { table: 'profiles', column: 'id' },
       { table: 'users', column: 'id' },
     ];
@@ -210,9 +209,6 @@ async function handleCleanupOperations(req, res, action) {
           orphanedRecords.mood_boards = orphanedMoodBoards.length;
         }
 
-        // Don't check user_preferences since the table doesn't exist
-        orphanedRecords.user_preferences = 'table_not_found';
-
         return res.status(200).json({
           success: true,
           orphanedRecords,
@@ -264,9 +260,6 @@ async function handleCleanupOperations(req, res, action) {
           console.log('Cleaned up orphaned mood boards');
           totalCleaned++;
         }
-
-        // Skip user_preferences cleanup since the table doesn't exist
-        console.log('user_preferences table not found, skipping');
 
         return res.status(200).json({
           success: true,
