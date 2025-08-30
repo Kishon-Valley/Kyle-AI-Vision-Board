@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 
-type BillingInterval = 'month' | 'year';
+type BillingInterval = 'basic' | 'pro' | 'yearly';
 
 interface StripePaymentButtonProps {
   billingInterval: BillingInterval;
@@ -60,7 +60,7 @@ const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({ billingInterv
       className="w-full mt-6"
       disabled={loading}
     >
-      {loading ? 'Processing...' : `Subscribe $${billingInterval === 'month' ? '1.99/month' : '15.00/year'}`}
+      {loading ? 'Processing...' : `Subscribe ${billingInterval === 'basic' ? '$1.99/month' : billingInterval === 'pro' ? '$4.99/month' : '$29.99/year'}`}
     </Button>
   );
 };

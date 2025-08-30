@@ -11,6 +11,7 @@ import { ArrowRight, ArrowLeft, Home, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useImageUsage } from '@/hooks/useImageUsage';
 
 interface FormData {
   roomType: string;
@@ -23,6 +24,7 @@ const QuestionnairePage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { hasSubscription, isLoading: isSubLoading, checkSubscription } = useSubscription();
+  const { canGenerateImage, remainingImages, imagesLimit, isLoading: isImageLoading } = useImageUsage();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
@@ -32,10 +34,10 @@ const QuestionnairePage = () => {
     budget: ''
   });
 
-  // Check authentication and subscription status
+  // Check authentication, subscription status, and image usage
   useEffect(() => {
-    if (isSubLoading) {
-      // Wait until subscription status has finished loading
+    if (isSubLoading || isImageLoading) {
+      // Wait until subscription and image usage status have finished loading
       return;
     }
     if (!isAuthenticated) {
@@ -55,8 +57,18 @@ const QuestionnairePage = () => {
         variant: 'destructive'
       });
       navigate('/pricing');
+      return;
     }
-  }, [isAuthenticated, hasSubscription, isSubLoading, navigate, toast]);
+
+    if (!canGenerateImage) {
+      toast({
+        title: 'Image Limit Reached',
+        description: `You've used all ${imagesLimit} images for this month. Upgrade your plan for more images.`,
+        variant: 'destructive'
+      });
+      navigate('/pricing');
+    }
+  }, [isAuthenticated, hasSubscription, canGenerateImage, isSubLoading, isImageLoading, imagesLimit, navigate, toast]);
 
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;
@@ -324,6 +336,20 @@ const QuestionnairePage = () => {
             </p>
           </div>
 
+          {/* Usage Indicator */}
+          {!isImageLoading && (
+            <div className="mb-4 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-600 dark:text-slate-300">
+                  Images remaining this month:
+                </span>
+                <span className={`font-medium ${remainingImages > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {remainingImages} / {imagesLimit}
+                </span>
+              </div>
+            </div>
+          )}
+          
           {/* Progress Bar */}
           <div className="mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <Progress value={progress} className="h-3 bg-white/30 backdrop-blur-sm" />

@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, checkUserSubscription } from '../lib/supabase';
 import { getUserMoodBoards, deleteAllUserMoodBoards } from '../lib/moodboards';
+import { useImageUsage } from '@/hooks/useImageUsage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ const UserProfile = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { imageUsage, remainingImages, imagesUsed, imagesLimit, subscriptionTier } = useImageUsage();
   const [isEditing, setIsEditing] = useState(false);
   const [accountType, setAccountType] = useState<'free' | 'premium'>('free');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -730,6 +732,58 @@ const UserProfile = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Subscription Usage Card */}
+              {accountType === 'premium' && (
+                <Card className="backdrop-blur-md bg-white/30 dark:bg-slate-900/50 border-white/20 dark:border-slate-700/50 shadow-2xl animate-fade-in" style={{ animationDelay: '0.6s' }}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Sparkles className="w-5 h-5 text-orange-500" />
+                      <span className="dark:text-white">Subscription Usage</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-700 dark:text-slate-200 font-medium">Current Plan:</span>
+                        <span className="text-slate-800 dark:text-white font-semibold capitalize">{subscriptionTier}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-700 dark:text-slate-200 font-medium">Images Used This Month:</span>
+                        <span className="text-slate-800 dark:text-white font-semibold">{imagesUsed} / {imagesLimit}</span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            remainingImages > 0 ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${Math.min(100, (imagesUsed / imagesLimit) * 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">Remaining:</span>
+                        <span className={`font-medium ${remainingImages > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {remainingImages} images
+                        </span>
+                      </div>
+                      {remainingImages === 0 && (
+                        <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                          <p className="text-sm text-orange-700 dark:text-orange-300">
+                            You've used all your images for this month. Upgrade your plan for more images!
+                          </p>
+                          <Button 
+                            onClick={() => navigate('/pricing')}
+                            className="mt-2 w-full bg-orange-500 hover:bg-orange-600 text-white"
+                            size="sm"
+                          >
+                            Upgrade Plan
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>

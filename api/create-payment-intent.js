@@ -20,10 +20,21 @@ export default async function handler(req, res) {
       apiVersion: '2025-07-30.basil',
     });
 
-    // Get the correct priceId from env
-    const priceId = billingInterval === 'year' 
-      ? process.env.VITE_STRIPE_PRICE_ID_YEARLY 
-      : process.env.VITE_STRIPE_PRICE_ID_MONTHLY;
+    // Get the correct priceId from env based on the new tier system
+    let priceId;
+    switch (billingInterval) {
+      case 'basic':
+        priceId = process.env.VITE_STRIPE_PRICE_ID_BASIC;
+        break;
+      case 'pro':
+        priceId = process.env.VITE_STRIPE_PRICE_ID_PRO;
+        break;
+      case 'yearly':
+        priceId = process.env.VITE_STRIPE_PRICE_ID_YEARLY;
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid billing interval' });
+    }
 
     // Create a Checkout Session for better subscription handling
     const session = await stripe.checkout.sessions.create({

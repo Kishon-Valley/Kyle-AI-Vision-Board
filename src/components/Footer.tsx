@@ -1,6 +1,9 @@
 import React from 'react';
 
 
+
+
+
 const Footer = () => {
   return (
     <footer className="bg-slate-800/90 dark:bg-slate-950/90 backdrop-blur-md border-t border-slate-700/50 dark:border-slate-800/50 mt-auto">
@@ -29,7 +32,7 @@ const Footer = () => {
                 rel="noopener noreferrer"
                 className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hover:underline underline-offset-4 decoration-2 transition-all duration-300 hover:from-blue-300 hover:to-cyan-300 font-semibold"
               >
-                SofiTechAiSolution
+                SofiTechAiSolutions
               </a>
             </p>
             <p className="text-xs text-slate-500">

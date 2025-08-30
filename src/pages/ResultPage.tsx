@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useImageUsage } from '@/hooks/useImageUsage';
 import { Download, Share, Heart, ArrowLeft, Sparkles, RefreshCw } from 'lucide-react';
 import { saveMoodBoard, MoodBoard as MoodBoardType } from '../lib/moodboards';
 import { supabase } from '../lib/supabase';
@@ -22,6 +23,7 @@ const ResultPage = () => {
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const { incrementImageUsage, remainingImages } = useImageUsage();
   const [isSaved, setIsSaved] = useState(false);
   const [moodBoard, setMoodBoard] = useState<MoodBoard | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -60,6 +62,9 @@ const ResultPage = () => {
         let imageUrl = '';
         
         try {
+          // Increment image usage before generating
+          await incrementImageUsage();
+          
           // Step 1: Generate design description
           description = await generateDesignDescription({
             roomType: questionnaireData.roomType,

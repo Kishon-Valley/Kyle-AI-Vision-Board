@@ -63,13 +63,41 @@ export default async function handler(req, res) {
           const subscriptionId = session.subscription || session.id;
           console.log('Storing subscription ID:', subscriptionId);
           
-          // Update user subscription status to active
+          // Determine tier and image limits based on billing interval
+          const billingInterval = session.metadata?.billing_interval;
+          let subscriptionTier = 'basic';
+          let imagesLimitPerMonth = 3;
+          
+          switch (billingInterval) {
+            case 'basic':
+              subscriptionTier = 'basic';
+              imagesLimitPerMonth = 3;
+              break;
+            case 'pro':
+              subscriptionTier = 'pro';
+              imagesLimitPerMonth = 25;
+              break;
+            case 'yearly':
+              subscriptionTier = 'yearly';
+              imagesLimitPerMonth = 25;
+              break;
+            default:
+              // Fallback to basic if billing interval is not specified
+              subscriptionTier = 'basic';
+              imagesLimitPerMonth = 3;
+          }
+          
+          // Update user subscription status to active with tier information
           const { data: updateData, error: updateError } = await adminClient
             .from('users')
             .upsert({
               id: userId,
               subscription_id: subscriptionId,
               subscription_status: 'active',
+              subscription_tier: subscriptionTier,
+              images_limit_per_month: imagesLimitPerMonth,
+              images_used_this_month: 0,
+              last_reset_date: new Date().toISOString().split('T')[0],
               updated_at: new Date().toISOString()
             })
             .select();
