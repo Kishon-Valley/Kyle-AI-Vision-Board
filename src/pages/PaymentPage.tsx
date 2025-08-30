@@ -28,9 +28,9 @@ const getPricingPlans = () => [
     price: '$4.99',
     description: 'Billed monthly',
     tier: 'pro',
-    imagesPerMonth: 25,
+    imagesPerMonth: 50,
     features: [
-      '25 AI-generated mood boards per month',
+      '50 AI-generated mood boards per month',
       'AI-powered design suggestions',
       'High-resolution downloads',
       'Priority support',
