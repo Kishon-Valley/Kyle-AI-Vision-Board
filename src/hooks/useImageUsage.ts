@@ -16,6 +16,7 @@ export const useImageUsage = () => {
   const [imageUsage, setImageUsage] = useState<ImageUsageData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastCheckTime, setLastCheckTime] = useState<number>(0);
 
   const checkImageUsage = useCallback(async () => {
     if (!user || !isAuthenticated) {
@@ -23,8 +24,15 @@ export const useImageUsage = () => {
       return;
     }
 
+    // Prevent rapid API calls - only check if 2 seconds have passed since last check
+    const now = Date.now();
+    if (now - lastCheckTime < 2000) {
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+    setLastCheckTime(now);
 
     try {
       const response = await fetch('/api/image-usage', {
@@ -46,7 +54,7 @@ export const useImageUsage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, lastCheckTime]);
 
   const incrementImageUsage = useCallback(async () => {
     if (!user || !isAuthenticated) {
@@ -83,20 +91,12 @@ export const useImageUsage = () => {
 
   // Check image usage when user changes or component mounts
   useEffect(() => {
-    checkImageUsage();
-  }, [checkImageUsage]);
-
-  // Add a retry mechanism for when subscription status changes
-  useEffect(() => {
     if (user && isAuthenticated) {
-      // Add a small delay to allow subscription data to sync
-      const timer = setTimeout(() => {
-        checkImageUsage();
-      }, 1000);
-      
-      return () => clearTimeout(timer);
+      checkImageUsage();
+    } else {
+      setImageUsage(null);
     }
-  }, [user?.id, isAuthenticated]);
+  }, [user?.id, isAuthenticated, checkImageUsage]);
 
   // Refresh image usage when subscription status changes
   const refreshImageUsage = useCallback(async () => {

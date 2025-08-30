@@ -358,18 +358,22 @@ const QuestionnairePage = () => {
           </div>
 
           {/* Usage Indicator */}
-          {!isImageLoading && (
-            <div className="mb-4 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600 dark:text-slate-300">
-                  Images remaining this month:
+          <div className="mb-4 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-600 dark:text-slate-300">
+                Images remaining this month:
+              </span>
+              {isImageLoading ? (
+                <span className="text-slate-500 dark:text-slate-400">
+                  Loading...
                 </span>
+              ) : (
                 <span className={`font-medium ${remainingImages > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {remainingImages} / {imagesLimit}
                 </span>
-              </div>
+              )}
             </div>
-          )}
+          </div>
           
           {/* Progress Bar */}
           <div className="mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
