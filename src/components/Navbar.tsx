@@ -158,7 +158,7 @@ const Navbar = () => {
             className="flex items-center space-x-2 text-white hover:text-orange-400 transition-colors"
           >
             <img src="/Kyle%20Logo%202.jpg" alt="Mood board Generator Logo" className="h-8 w-8 rounded-full object-cover" />
-            <span className="text-xl font-bold">Mood board Generator</span>
+            <span className="text-xl font-bold">Mood Board Generator</span>
           </Link>
 
           {/* Mobile menu button */}

@@ -1,6 +1,6 @@
 {
-  "name": "Kyle's Mood Board - AI Interior Design",
-  "short_name": "Kyle's Mood Board",
+  "name": "Mood Board - AI Interior Design",
+  "short_name": "Mood Board",
   "description": "Create personalized AI-powered interior design mood boards",
   "start_url": "/",
   "display": "standalone",
