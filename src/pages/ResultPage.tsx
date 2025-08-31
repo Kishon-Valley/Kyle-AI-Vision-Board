@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useImageUsage } from '@/hooks/useImageUsage';
-import { Download, Share, Heart, ArrowLeft, Sparkles, RefreshCw } from 'lucide-react';
+import { Download, Share, Heart, ArrowLeft, Sparkles, RefreshCw, Loader2 } from 'lucide-react';
 import { saveMoodBoard, MoodBoard as MoodBoardType } from '../lib/moodboards';
 import { supabase } from '../lib/supabase';
 import { generateDesignDescription, generateImagePrompt, generateMoodBoardImage } from '../lib/openai';
@@ -25,6 +25,8 @@ const ResultPage = () => {
   const { toast } = useToast();
   const { incrementImageUsage, remainingImages } = useImageUsage();
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [moodBoard, setMoodBoard] = useState<MoodBoard | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -147,6 +149,7 @@ const ResultPage = () => {
       } finally {
         setIsGenerating(false);
         setIsLoading(false);
+        setIsRegenerating(false);
       }
     };
     
@@ -265,7 +268,7 @@ const ResultPage = () => {
 
     if (!moodBoard) return;
     
-
+    setIsSaving(true);
 
     try {
       // Save to Supabase
@@ -298,11 +301,14 @@ const ResultPage = () => {
         description: "There was an error saving your mood board. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   // Function to regenerate the mood board
   const handleRegenerate = () => {
+    setIsRegenerating(true);
     setIsLoading(true);
     setIsSaved(false);
     setMoodBoard(null);
@@ -375,20 +381,39 @@ const ResultPage = () => {
           
           <Button
             onClick={handleSave}
-            disabled={isSaved || !isAuthenticated}
+            disabled={isSaved || !isAuthenticated || isSaving}
             className="flex items-center space-x-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50"
           >
-            <Heart className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-            <span>{isSaved ? 'Saved' : 'Save to History'}</span>
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Heart className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+                <span>{isSaved ? 'Saved' : 'Save to History'}</span>
+              </>
+            )}
           </Button>
           
           <Button
             onClick={handleRegenerate}
+            disabled={isRegenerating}
             variant="outline"
             className="flex items-center space-x-2 dark:border-slate-600 dark:text-slate-200"
           >
-            <RefreshCw className="w-4 h-4" />
-            <span>Regenerate</span>
+            {isRegenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Regenerating...</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                <span>Regenerate</span>
+              </>
+            )}
           </Button>
         </div>
 

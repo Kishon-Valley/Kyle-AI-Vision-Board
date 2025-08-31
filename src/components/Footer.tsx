@@ -1,9 +1,5 @@
 import React from 'react';
 
-
-
-
-
 const Footer = () => {
   return (
     <footer className="bg-slate-800/90 dark:bg-slate-950/90 backdrop-blur-md border-t border-slate-700/50 dark:border-slate-800/50 mt-auto">
