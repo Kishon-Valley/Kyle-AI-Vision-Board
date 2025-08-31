@@ -22,29 +22,69 @@ export async function saveMoodBoard(moodBoard: MoodBoard) {
   if (!userData?.user) {
     throw new Error('User not authenticated');
   }
+
+  console.log('Attempting to save mood board for user:', userData.user.id);
   
-  const { data, error } = await supabase
-    .from('mood_boards')
-    .insert([
-      {
-        user_id: userData.user.id,
-        image_url: moodBoard.image_url,
-        description: moodBoard.description,
-        style: moodBoard.style,
-        room_type: moodBoard.room_type,
-        color_palette: moodBoard.color_palette,
-        budget: moodBoard.budget,
-        status: moodBoard.status || 'in_progress'
+  // Add timeout to prevent hanging
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Save operation timed out')), 10000); // 10 second timeout
+  });
+
+  try {
+    const savePromise = (async () => {
+      const { data, error } = await supabase
+        .from('mood_boards')
+        .insert([
+          {
+            user_id: userData.user.id,
+            image_url: moodBoard.image_url,
+            description: moodBoard.description,
+            style: moodBoard.style,
+            room_type: moodBoard.room_type,
+            color_palette: moodBoard.color_palette,
+            budget: moodBoard.budget,
+            status: moodBoard.status || 'in_progress'
+          }
+        ])
+        .select();
+      
+      if (error) {
+        console.error('Supabase error saving mood board:', error);
+        throw error;
       }
-    ])
-    .select();
-  
-  if (error) {
-    console.error('Error saving mood board:', error);
+
+      console.log('Mood board saved successfully:', data[0]);
+      return data[0];
+    })();
+
+    // Race between save operation and timeout
+    return await Promise.race([savePromise, timeoutPromise]) as any;
+  } catch (error) {
+    console.error('Error in saveMoodBoard function:', error);
+    
+    // Check if it's a duplicate key error (which might actually mean success)
+    if (error instanceof Error && error.message.includes('duplicate key')) {
+      console.log('Duplicate key error - mood board might already be saved');
+      // Try to fetch the existing record
+      try {
+        const { data: existingData, error: fetchError } = await supabase
+          .from('mood_boards')
+          .select('*')
+          .eq('user_id', userData.user.id)
+          .eq('image_url', moodBoard.image_url)
+          .single();
+        
+        if (!fetchError && existingData) {
+          console.log('Found existing mood board:', existingData);
+          return existingData;
+        }
+      } catch (fetchError) {
+        console.error('Error fetching existing mood board:', fetchError);
+      }
+    }
+    
     throw error;
   }
-  
-  return data[0];
 }
 
 /**

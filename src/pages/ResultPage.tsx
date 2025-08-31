@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useImageUsage } from '@/hooks/useImageUsage';
 import { Download, Share, Heart, ArrowLeft, Sparkles, RefreshCw, Loader2 } from 'lucide-react';
-import { saveMoodBoard, MoodBoard as MoodBoardType } from '../lib/moodboards';
+import { saveMoodBoard, getUserMoodBoards, MoodBoard as MoodBoardType } from '../lib/moodboards';
 import { supabase } from '../lib/supabase';
 import { generateDesignDescription, generateImagePrompt, generateMoodBoardImage } from '../lib/openai';
 import { getColorValue, getTextColor } from '@/lib/colors';
@@ -31,6 +31,29 @@ const ResultPage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [regenTrigger, setRegenTrigger] = useState(0);
+
+  // Check if current mood board is already saved
+  useEffect(() => {
+    const checkIfAlreadySaved = async () => {
+      if (!moodBoard || !isAuthenticated) return;
+      
+      try {
+        const savedMoodBoards = await getUserMoodBoards();
+        const isAlreadySaved = savedMoodBoards.some(
+          (board) => board.image_url === moodBoard.image_url
+        );
+        
+        if (isAlreadySaved) {
+          console.log('Mood board is already saved');
+          setIsSaved(true);
+        }
+      } catch (error) {
+        console.error('Error checking if mood board is already saved:', error);
+      }
+    };
+
+    checkIfAlreadySaved();
+  }, [moodBoard, isAuthenticated]);
 
   useEffect(() => {
     const generateMoodBoard = async () => {
@@ -268,18 +291,44 @@ const ResultPage = () => {
 
     if (!moodBoard) return;
     
+    // Prevent duplicate saves
+    if (isSaved) {
+      toast({
+        title: "Already Saved",
+        description: "This mood board has already been saved to your history.",
+      });
+      return;
+    }
+    
     setIsSaving(true);
 
+    // Retry mechanism for save operation
+    const retrySave = async (attempts: number = 3): Promise<any> => {
+      for (let i = 0; i < attempts; i++) {
+        try {
+          console.log(`Save attempt ${i + 1}/${attempts}`);
+          return await saveMoodBoard({
+            image_url: moodBoard.image_url,
+            description: moodBoard.description,
+            style: moodBoard.style,
+            room_type: moodBoard.room_type,
+            color_palette: moodBoard.color_palette,
+            budget: moodBoard.budget
+          });
+        } catch (error) {
+          console.error(`Save attempt ${i + 1} failed:`, error);
+          if (i === attempts - 1) throw error; // Last attempt, re-throw
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        }
+      }
+    };
+
     try {
-      // Save to Supabase
-      await saveMoodBoard({
-        image_url: moodBoard.image_url,
-        description: moodBoard.description,
-        style: moodBoard.style,
-        room_type: moodBoard.room_type,
-        color_palette: moodBoard.color_palette,
-        budget: moodBoard.budget
-      });
+      // Save to Supabase with retry
+      const savedMoodBoard = await retrySave();
+
+      console.log('Mood board saved successfully to Supabase:', savedMoodBoard);
       
       // Also save to localStorage as a backup (avoid duplicates)
       const savedMoodBoards: any[] = JSON.parse(localStorage.getItem('moodboards') || '[]');
@@ -287,6 +336,7 @@ const ResultPage = () => {
       if (!alreadyLocal) {
         savedMoodBoards.push(moodBoard);
         localStorage.setItem('moodboards', JSON.stringify(savedMoodBoards));
+        console.log('Mood board also saved to localStorage');
       }
       
       setIsSaved(true);
@@ -296,11 +346,25 @@ const ResultPage = () => {
       });
     } catch (error) {
       console.error('Error saving mood board:', error);
-      toast({
-        title: "Save Failed",
-        description: "There was an error saving your mood board. Please try again.",
-        variant: "destructive"
-      });
+      
+      // Check if the error is actually a network timeout or similar issue
+      // that might not indicate a real failure
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // If it's a timeout or network error, show a different message
+      if (errorMessage.includes('timeout') || errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        toast({
+          title: "Save Status Uncertain",
+          description: "The save operation may have completed. Please check your history to confirm.",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Save Failed",
+          description: "There was an error saving your mood board. Please try again.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsSaving(false);
     }
