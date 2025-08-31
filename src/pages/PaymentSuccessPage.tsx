@@ -69,7 +69,7 @@ const PaymentSuccessPage = () => {
             console.log('Checking subscription status for user:', user.id);
             
             // Wait a moment for database updates to propagate
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 3000));
             
             const subResponse = await fetch('/api/check-subscription', {
               method: 'POST',
@@ -82,19 +82,19 @@ const PaymentSuccessPage = () => {
               console.log('Subscription status after payment:', subData);
               
               if (subData.hasSubscription) {
-                setStatus('success');
-                // Redirect after a short delay to allow the user to see the success message
-                setTimeout(() => {
-                  navigate('/questionnaire');
-                }, 3000);
+                        setStatus('success');
+        // Redirect after a delay to allow the user to see the success message and prevent flickering
+        setTimeout(() => {
+          navigate('/questionnaire', { replace: true });
+        }, 3000);
                 return;
               } else {
                 // If subscription is still not active and we haven't retried too many times
-                if (retryCount < 3) {
-                  console.log(`Subscription not yet active, retrying in 3 seconds... (attempt ${retryCount + 1}/3)`);
+                if (retryCount < 2) {
+                  console.log(`Subscription not yet active, retrying in 5 seconds... (attempt ${retryCount + 1}/2)`);
                   setTimeout(() => {
                     verifyPayment(true);
-                  }, 3000);
+                  }, 5000);
                   return;
                 } else {
                   console.error('Subscription still not active after multiple retries. This indicates a webhook or database issue.');
@@ -105,10 +105,10 @@ const PaymentSuccessPage = () => {
               }
             } else {
               console.error('Failed to check subscription status:', subResponse.status, subResponse.statusText);
-              if (retryCount < 2) {
+              if (retryCount < 1) {
                 setTimeout(() => {
                   verifyPayment(true);
-                }, 3000);
+                }, 5000);
                 return;
               }
             }
@@ -126,9 +126,9 @@ const PaymentSuccessPage = () => {
         }
         
         setStatus('success');
-        // Redirect after a short delay to allow the user to see the success message
+        // Redirect after a delay to allow the user to see the success message and prevent flickering
         setTimeout(() => {
-          navigate('/questionnaire');
+          navigate('/questionnaire', { replace: true });
         }, 3000);
       } else {
         console.error('Payment verification failed:', data);
@@ -161,7 +161,7 @@ const PaymentSuccessPage = () => {
           <div className="flex flex-col items-center justify-center space-y-4">
             <RefreshCw className="h-16 w-16 animate-spin text-orange-500" />
             <CardTitle className="text-2xl">Activating Subscription</CardTitle>
-            <CardDescription>Please wait while we activate your subscription... (Attempt {retryCount}/3)</CardDescription>
+            <CardDescription>Please wait while we activate your subscription... (Attempt {retryCount}/2)</CardDescription>
           </div>
         );
       case 'success':

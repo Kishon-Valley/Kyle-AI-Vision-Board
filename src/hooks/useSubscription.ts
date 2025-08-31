@@ -12,6 +12,7 @@ export const useSubscription = () => {
   const isCheckingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  const lastStatusChangeRef = useRef<number>(0);
 
   // Function to check subscription status
   const checkSubscriptionStatus = useCallback(async (forceCheck = false) => {
@@ -34,6 +35,12 @@ export const useSubscription = () => {
       return;
     }
 
+    // Prevent rapid status changes that cause flickering
+    const now = Date.now();
+    if (!forceCheck && now - lastStatusChangeRef.current < 2000) {
+      return;
+    }
+
     try {
       isCheckingRef.current = true;
       lastUserIdRef.current = user.id;
@@ -42,8 +49,8 @@ export const useSubscription = () => {
         setIsLoading(true);
       }
       
-      // Add a small delay to prevent rapid state changes
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Add a longer delay to prevent rapid state changes and flickering
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Check if component is still mounted before proceeding
       if (!mountedRef.current) {
@@ -64,6 +71,7 @@ export const useSubscription = () => {
         if (mountedRef.current) {
           setHasSubscription(data.hasSubscription);
           setSubscriptionStatus(data.subscriptionStatus);
+          lastStatusChangeRef.current = Date.now();
         }
       } else {
         // Fallback to local database check
@@ -75,6 +83,7 @@ export const useSubscription = () => {
         if (mountedRef.current) {
           setHasSubscription(active);
           setSubscriptionStatus(active ? 'active' : 'inactive');
+          lastStatusChangeRef.current = Date.now();
         }
       }
     } catch (error) {
@@ -83,6 +92,7 @@ export const useSubscription = () => {
       if (mountedRef.current) {
         setHasSubscription(false);
         setSubscriptionStatus('inactive');
+        lastStatusChangeRef.current = Date.now();
       }
     } finally {
       if (mountedRef.current) {

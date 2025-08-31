@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Check, Loader2, Crown, Sparkles, ArrowRight, Palette, Download, History } from 'lucide-react';
@@ -204,11 +204,16 @@ const ActiveSubscriberView = ({ user, navigate }: { user: any; navigate: any }) 
 
 const PaymentPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { hasSubscription, isLoading: subLoading, refreshSubscription } = useSubscription();
   const [billingInterval, setBillingInterval] = useState<'basic' | 'pro' | 'yearly'>('basic');
   const [showContent, setShowContent] = useState(false);
   const mountedRef = useRef(false);
+
+  // Check if user is coming from payment success page
+  const isFromPaymentSuccess = location.search.includes('session_id') || 
+                              document.referrer.includes('payment-success');
 
   // Ensure minimum loading time to prevent flickering
   useEffect(() => {
@@ -226,15 +231,15 @@ const PaymentPage = () => {
 
   // Refresh subscription data when component mounts (useful after payment)
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // Add a delay to allow webhook processing
+    if (isAuthenticated && user && !isFromPaymentSuccess) {
+      // Add a longer delay to allow webhook processing and prevent flickering
       const timer = setTimeout(() => {
         refreshSubscription();
-      }, 2000);
+      }, 5000); // Increased from 2000ms to 5000ms to prevent flickering
       
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, user, refreshSubscription]);
+  }, [isAuthenticated, user, refreshSubscription, isFromPaymentSuccess]);
 
   // Show loading while checking authentication and subscription status
   const shouldShowLoading = (authLoading || subLoading) && !isAuthenticated || !showContent;
