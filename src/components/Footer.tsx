@@ -12,7 +12,7 @@ const Footer = () => {
           {/* Logo and Description */}
           <div>
             <div className="flex items-center justify-center space-x-2 mb-3">
-                             <img src="/logo.jpg" alt="Mood Board Generator Logo" className="h-10 w-10 rounded-full object-cover" />
+                             <img src="/Kyle%20Logo%202.jpg" alt="Mood Board Generator Logo" className="h-10 w-10 rounded-full object-cover" />
                <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
                   Mood Board Generator
                </span>
