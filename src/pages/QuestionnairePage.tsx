@@ -66,21 +66,19 @@ const QuestionnairePage = () => {
       return;
     }
 
-    // Only check image usage if user has a subscription and we have valid data
+    // Check image usage for users with active subscriptions
     if (hasSubscription && imagesLimit > 0 && !canGenerateImage && !hasShownError) {
       setHasShownError(true);
       toast({
         title: 'Image Limit Reached',
-        description: `You've used all ${imagesLimit} images for this month. Upgrade your plan for more images.`,
+        description: `You've used all ${imagesLimit} images for this month. Please wait until next month or upgrade your plan for more images.`,
         variant: 'destructive'
       });
-      navigate('/pricing');
+      // Don't redirect to pricing - let them stay on the page but show the message
       return;
     }
 
-    // If user has subscription but imagesLimit is 0, it might be a data sync issue
-    // Don't redirect in this case, let the user proceed
-    // Reset error flag if everything is good
+    // If user has subscription and can generate images, reset error flag
     if (hasSubscription && canGenerateImage) {
       setHasShownError(false);
     }
@@ -112,6 +110,17 @@ const QuestionnairePage = () => {
     if (!checkSubscription()) {
       return;
     }
+    
+    // Check if user can generate images
+    if (hasSubscription && imagesLimit > 0 && !canGenerateImage) {
+      toast({
+        title: 'Image Limit Reached',
+        description: `You've used all ${imagesLimit} images for this month. Please wait until next month or upgrade your plan for more images.`,
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     // Store form data and navigate to loading page
     localStorage.setItem('questionnaireData', JSON.stringify(formData));
     navigate('/loading');
@@ -358,7 +367,11 @@ const QuestionnairePage = () => {
           </div>
 
           {/* Usage Indicator */}
-          <div className="mb-4 p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          <div className={`mb-4 p-3 rounded-lg border backdrop-blur-sm animate-fade-in ${
+            remainingImages === 0 && !isImageLoading 
+              ? 'bg-red-50/80 dark:bg-red-900/20 border-red-200/50 dark:border-red-800/50' 
+              : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/50 dark:border-slate-700/50'
+          }`} style={{ animationDelay: '0.1s' }}>
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-600 dark:text-slate-300">
                 Images remaining this month:
@@ -373,6 +386,11 @@ const QuestionnairePage = () => {
                 </span>
               )}
             </div>
+            {remainingImages === 0 && !isImageLoading && (
+              <div className="mt-2 text-xs text-red-600 dark:text-red-400 font-medium">
+                ⚠️ You've used all your images for this month. Please wait until next month or upgrade your plan.
+              </div>
+            )}
           </div>
           
           {/* Progress Bar */}
@@ -406,8 +424,8 @@ const QuestionnairePage = () => {
             
             <Button
               onClick={handleNext}
-              disabled={!isStepValid()}
-              className="flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+              disabled={!isStepValid() || (currentStep === totalSteps && hasSubscription && imagesLimit > 0 && !canGenerateImage)}
+              className="flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{currentStep === totalSteps ? 'Create Mood Board' : 'Next'}</span>
               <ArrowRight className="w-4 h-4" />
