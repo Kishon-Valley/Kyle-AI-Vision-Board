@@ -184,7 +184,7 @@ const LandingPage = () => {
       <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Welcome to AI-powered Moodboard Generator</DialogTitle>
+            <DialogTitle>Welcome to AI-powered Mood Board Generator</DialogTitle>
             <DialogDescription>
               Sign in to create your personalized mood board.
             </DialogDescription>

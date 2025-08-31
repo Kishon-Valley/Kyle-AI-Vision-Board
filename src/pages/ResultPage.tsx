@@ -226,7 +226,7 @@ const ResultPage = () => {
         // Fallback: Share the image URL if file sharing isn't supported
         await navigator.share({
           title: `My ${moodBoard.style} ${moodBoard.room_type} Design`,
-          text: `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI!`,
+          text: `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Mood Board Generator!`,
           url: moodBoard.image_url,
         });
         

@@ -145,8 +145,8 @@ const HistoryPage = () => {
       if (navigator.share) {
         // Create personalized share content
         await navigator.share({
-          title: `My ${moodBoard.style} ${moodBoard.room_type} Design by Vision Board AI`,
-          text: `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI!`,
+                     title: `My ${moodBoard.style} ${moodBoard.room_type} Design by Mood Board Generator`,
+           text: `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Mood Board Generator!`,
           url: shareUrl,
         });
         
@@ -156,7 +156,7 @@ const HistoryPage = () => {
         });
       } else {
         // Fallback for browsers without Web Share API
-        const shareText = `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Vision Board AI! ${shareUrl}`;
+                 const shareText = `Check out this ${moodBoard.style} ${moodBoard.room_type} design I created with Mood Board Generator! ${shareUrl}`;
         navigator.clipboard.writeText(shareText);
         
         toast({

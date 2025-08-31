@@ -83,7 +83,7 @@ export function PaymentSuccess() {
               </div>
               <h2 className="mt-6 text-2xl font-bold text-gray-900">Payment Successful!</h2>
               <p className="mt-2 text-sm text-gray-600">
-                Thank you for subscribing to Vision Board AI. Your subscription is now active.
+                Thank you for subscribing to Mood Board Generator. Your subscription is now active.
               </p>
               <div className="mt-6">
                 <Button onClick={handleBackToApp}>
