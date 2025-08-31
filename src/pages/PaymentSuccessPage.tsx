@@ -55,8 +55,13 @@ const PaymentSuccessPage = () => {
         console.log('Payment verification successful:', data);
         
         // Step 1: Refresh the Supabase session to get the latest user data
-        await refreshUser();
-        console.log('User session refreshed');
+        const refreshResult = await refreshUser();
+        if (refreshResult.success) {
+          console.log('User session refreshed successfully');
+        } else {
+          console.warn('User session refresh failed:', refreshResult.error);
+          // Continue with the flow even if refresh fails, as we can still check subscription
+        }
         
         // Step 2: Force refresh subscription status by calling the check-subscription API
         if (user?.id) {

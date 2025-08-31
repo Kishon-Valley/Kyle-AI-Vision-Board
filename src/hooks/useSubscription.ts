@@ -11,33 +11,44 @@ export const useSubscription = () => {
   const { user } = useAuth();
   const isCheckingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
 
   // Function to check subscription status
-  const checkSubscriptionStatus = useCallback(async () => {
+  const checkSubscriptionStatus = useCallback(async (forceCheck = false) => {
     // Prevent multiple simultaneous checks
     if (isCheckingRef.current) {
       return;
     }
 
     if (!user) {
-      setHasSubscription(false);
-      setSubscriptionStatus('inactive');
-      setIsLoading(false);
+      if (mountedRef.current) {
+        setHasSubscription(false);
+        setSubscriptionStatus('inactive');
+        setIsLoading(false);
+      }
       return;
     }
 
-    // Prevent checking for the same user multiple times
-    if (lastUserIdRef.current === user.id) {
+    // Prevent checking for the same user multiple times unless forced
+    if (!forceCheck && lastUserIdRef.current === user.id) {
       return;
     }
 
     try {
       isCheckingRef.current = true;
       lastUserIdRef.current = user.id;
-      setIsLoading(true);
+      
+      if (mountedRef.current) {
+        setIsLoading(true);
+      }
       
       // Add a small delay to prevent rapid state changes
       await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check if component is still mounted before proceeding
+      if (!mountedRef.current) {
+        return;
+      }
       
       // First try the new API endpoint for better synchronization
       const response = await fetch('/api/check-subscription', {
@@ -49,34 +60,63 @@ export const useSubscription = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('Subscription check result:', data);
-        setHasSubscription(data.hasSubscription);
-        setSubscriptionStatus(data.subscriptionStatus);
+        
+        if (mountedRef.current) {
+          setHasSubscription(data.hasSubscription);
+          setSubscriptionStatus(data.subscriptionStatus);
+        }
       } else {
         // Fallback to local database check
         const { hasSubscription: active, error } = await checkUserSubscription(user.id);
         if (error) {
           console.warn('Error checking subscription:', error);
         }
-        setHasSubscription(active);
-        setSubscriptionStatus(active ? 'active' : 'inactive');
+        
+        if (mountedRef.current) {
+          setHasSubscription(active);
+          setSubscriptionStatus(active ? 'active' : 'inactive');
+        }
       }
     } catch (error) {
       console.error('Error checking subscription:', error);
-      setHasSubscription(false);
-      setSubscriptionStatus('inactive');
+      
+      if (mountedRef.current) {
+        setHasSubscription(false);
+        setSubscriptionStatus('inactive');
+      }
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
       isCheckingRef.current = false;
     }
-  }, [user]);
+  }, [user?.id]); // Only depend on user.id, not the entire user object
 
   // Initial check when component mounts or user changes
   useEffect(() => {
-    // Only check if user has changed
+    // Reset state when user changes
     if (user?.id !== lastUserIdRef.current) {
-      checkSubscriptionStatus();
+      // Reset refs when user changes
+      lastUserIdRef.current = null;
+      isCheckingRef.current = false;
+      
+      // Reset state immediately for new user
+      setHasSubscription(false);
+      setSubscriptionStatus('inactive');
+      setIsLoading(true);
     }
+    
+    // Check subscription status
+    checkSubscriptionStatus();
   }, [user?.id, checkSubscriptionStatus]);
+
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      isCheckingRef.current = false;
+    };
+  }, []);
 
   const checkSubscription = useCallback(() => {
     if (!hasSubscription) {
@@ -89,10 +129,9 @@ export const useSubscription = () => {
   const refreshSubscription = useCallback(async () => {
     if (!user) return;
     
-    // Reset the ref to force a fresh check
-    lastUserIdRef.current = null;
-    await checkSubscriptionStatus();
-  }, [user, checkSubscriptionStatus]);
+    // Force a fresh check by passing true
+    await checkSubscriptionStatus(true);
+  }, [checkSubscriptionStatus]);
 
   return {
     hasSubscription,

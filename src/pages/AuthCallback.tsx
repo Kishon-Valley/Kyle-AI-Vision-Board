@@ -58,8 +58,13 @@ const AuthCallback = () => {
           
           // Refresh user data in context
           console.log('🔄 AuthCallback: Refreshing user data...');
-          await refreshUser();
-          console.log('✅ AuthCallback: User data refreshed');
+          const refreshResult = await refreshUser();
+          if (refreshResult.success) {
+            console.log('✅ AuthCallback: User data refreshed successfully');
+          } else {
+            console.warn('⚠️ AuthCallback: User data refresh failed:', refreshResult.error);
+            // Continue with the flow even if refresh fails, as we have the session user data
+          }
           
           // Check subscription status directly
           try {

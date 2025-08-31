@@ -67,7 +67,7 @@ export default async function handler(req, res) {
           correctImageLimit = 3;
         } else if (priceId === process.env.VITE_STRIPE_PRICE_ID_PRO) {
           correctTier = 'pro';
-          correctImageLimit = 25;
+          correctImageLimit = 50;
         } else if (priceId === process.env.VITE_STRIPE_PRICE_ID_YEARLY) {
           correctTier = 'yearly';
           correctImageLimit = 50;

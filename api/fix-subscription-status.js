@@ -1,6 +1,35 @@
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
+/**
+ * Centralized status mapping function
+ * Maps Stripe subscription statuses to our local database statuses
+ * 
+ * Stripe Statuses -> Local Statuses:
+ * - 'active', 'trialing' -> 'active'
+ * - 'canceled', 'unpaid', 'past_due', 'incomplete_expired' -> 'cancelled'
+ * - 'incomplete' -> 'inactive'
+ * - All others -> 'inactive'
+ * 
+ * Note: Stripe uses 'canceled' (American spelling) while we use 'cancelled' (British spelling)
+ */
+const mapStripeStatusToLocal = (stripeStatus) => {
+  switch (stripeStatus) {
+    case 'active':
+    case 'trialing':
+      return 'active';
+    case 'canceled':
+    case 'unpaid':
+    case 'past_due':
+    case 'incomplete_expired':
+      return 'cancelled';
+    case 'incomplete':
+      return 'inactive';
+    default:
+      return 'inactive';
+  }
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -69,21 +98,7 @@ export default async function handler(req, res) {
           }
         }
 
-        // Determine correct status
-        let correctStatus = 'inactive';
-        switch (stripeStatus) {
-          case 'active':
-          case 'trialing':
-            correctStatus = 'active';
-            break;
-          case 'canceled':
-          case 'unpaid':
-          case 'past_due':
-            correctStatus = 'cancelled';
-            break;
-          default:
-            correctStatus = 'inactive';
-        }
+        const correctStatus = mapStripeStatusToLocal(stripeStatus);
 
         // Update user status if different
         if (correctStatus !== user.subscription_status) {

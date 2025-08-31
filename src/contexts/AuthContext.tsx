@@ -18,7 +18,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -176,24 +176,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const refreshUser = async () => {
-    // First, refresh the session to get the latest user data from the server
-    const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) {
-      console.error('Error refreshing session:', refreshError.message);
-      // Don't proceed if session refresh fails
-      return;
-    }
+  const refreshUser = async (retryCount = 0): Promise<{ success: boolean; error?: string }> => {
+    const maxRetries = 2;
+    
+    try {
+      // First, try to refresh the session to get the latest user data from the server
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.error('Error refreshing session:', refreshError.message);
+        
+        // Retry logic for transient errors
+        if (retryCount < maxRetries && (
+          refreshError.message.includes('network') || 
+          refreshError.message.includes('timeout') ||
+          refreshError.message.includes('fetch')
+        )) {
+          console.log(`Retrying session refresh (attempt ${retryCount + 1}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          return refreshUser(retryCount + 1);
+        }
+        
+        // Fallback: try to get user data from current session without refreshing
+        console.log('Attempting fallback: getting user from current session...');
+        const { data: { user: currentUser }, error: getUserError } = await supabase.auth.getUser();
+        
+        if (getUserError) {
+          console.error('Fallback failed - error getting user:', getUserError.message);
+          return { 
+            success: false, 
+            error: `Session refresh failed: ${refreshError.message}. Fallback also failed: ${getUserError.message}` 
+          };
+        }
+        
+        if (currentUser) {
+          console.log('Fallback successful: using current session user data');
+          setUserFromSupabase(currentUser);
+          return { success: true };
+        } else {
+          console.error('Fallback failed: no user found in current session');
+          return { 
+            success: false, 
+            error: `Session refresh failed: ${refreshError.message}. No user found in current session.` 
+          };
+        }
+      }
 
-    // After refreshing, getUser() will return the updated user from the new session
-    const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser();
-    if (getUserError) {
-      console.error('Error getting user after refresh:', getUserError.message);
-      return;
-    }
+      // Session refresh successful, get the updated user data
+      const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser();
+      
+      if (getUserError) {
+        console.error('Error getting user after refresh:', getUserError.message);
+        return { 
+          success: false, 
+          error: `Session refreshed but failed to get user: ${getUserError.message}` 
+        };
+      }
 
-    if (supabaseUser) {
-      setUserFromSupabase(supabaseUser);
+      if (supabaseUser) {
+        console.log('Successfully refreshed user data');
+        setUserFromSupabase(supabaseUser);
+        return { success: true };
+      } else {
+        console.error('No user found after successful session refresh');
+        return { 
+          success: false, 
+          error: 'Session refreshed successfully but no user data found' 
+        };
+      }
+    } catch (error) {
+      console.error('Unexpected error in refreshUser:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred during user refresh' 
+      };
     }
   };
 

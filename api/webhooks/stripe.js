@@ -1,6 +1,35 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
+/**
+ * Centralized status mapping function
+ * Maps Stripe subscription statuses to our local database statuses
+ * 
+ * Stripe Statuses -> Local Statuses:
+ * - 'active', 'trialing' -> 'active'
+ * - 'canceled', 'unpaid', 'past_due', 'incomplete_expired' -> 'cancelled'
+ * - 'incomplete' -> 'inactive'
+ * - All others -> 'inactive'
+ * 
+ 
+ */
+const mapStripeStatusToLocal = (stripeStatus) => {
+  switch (stripeStatus) {
+    case 'active':
+    case 'trialing':
+      return 'active';
+    case 'canceled':
+    case 'unpaid':
+    case 'past_due':
+    case 'incomplete_expired':
+      return 'cancelled';
+    case 'incomplete':
+      return 'inactive';
+    default:
+      return 'inactive';
+  }
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -75,11 +104,11 @@ export default async function handler(req, res) {
               break;
             case 'pro':
               subscriptionTier = 'pro';
-              imagesLimitPerMonth = 25;
+              imagesLimitPerMonth = 50;
               break;
             case 'yearly':
               subscriptionTier = 'yearly';
-              imagesLimitPerMonth = 25;
+              imagesLimitPerMonth = 50;
               break;
             default:
               // Fallback to basic if billing interval is not specified
@@ -139,22 +168,7 @@ export default async function handler(req, res) {
             return res.status(404).json({ error: 'No user found for subscription' });
           }
 
-          let status = 'inactive';
-          
-          // Map Stripe subscription status to our status
-          switch (subscription.status) {
-            case 'active':
-            case 'trialing':
-              status = 'active';
-              break;
-            case 'canceled':
-            case 'unpaid':
-            case 'past_due':
-              status = 'cancelled';
-              break;
-            default:
-              status = 'inactive';
-          }
+          const status = mapStripeStatusToLocal(subscription.status);
 
           console.log(`Updating subscription status for user ${userData.id}: ${userData.subscription_status} -> ${status}`);
 
