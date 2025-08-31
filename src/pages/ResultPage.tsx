@@ -268,26 +268,11 @@ const ResultPage = () => {
 
     if (!moodBoard) return;
     
-    // Prevent duplicate saves
-    if (isSaved) {
-      toast({
-        title: "Already Saved",
-        description: "This mood board has already been saved to your history.",
-      });
-      return;
-    }
-    
     setIsSaving(true);
 
     try {
-      console.log('Starting save operation for mood board:', {
-        image_url: moodBoard.image_url,
-        style: moodBoard.style,
-        room_type: moodBoard.room_type
-      });
-      
-      // Save to Supabase with timeout
-      const savePromise = saveMoodBoard({
+      // Save to Supabase
+      await saveMoodBoard({
         image_url: moodBoard.image_url,
         description: moodBoard.description,
         style: moodBoard.style,
@@ -295,16 +280,6 @@ const ResultPage = () => {
         color_palette: moodBoard.color_palette,
         budget: moodBoard.budget
       });
-      
-      // Set a 30-second timeout
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Save operation timed out')), 30000);
-      });
-      
-      // Race between save and timeout
-      const savedMoodBoard = await Promise.race([savePromise, timeoutPromise]);
-      
-      console.log('Save operation completed successfully:', savedMoodBoard);
       
       // Also save to localStorage as a backup (avoid duplicates)
       const savedMoodBoards: any[] = JSON.parse(localStorage.getItem('moodboards') || '[]');
@@ -315,36 +290,15 @@ const ResultPage = () => {
       }
       
       setIsSaved(true);
-      
-      // Add a small delay to ensure the database operation has fully completed
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
       toast({
         title: "✨ Mood Board Saved Successfully!",
         description: "Your new mood board has been saved to your personal history.",
       });
     } catch (error) {
       console.error('Error saving mood board:', error);
-      
-      // Provide more specific error messages
-      let errorMessage = "There was an error saving your mood board. Please try again.";
-      
-      if (error instanceof Error) {
-        if (error.message.includes('timeout')) {
-          errorMessage = "The save operation timed out. Please check your connection and try again.";
-        } else if (error.message.includes('network')) {
-          errorMessage = "Network error. Please check your internet connection and try again.";
-        } else if (error.message.includes('duplicate') || error.message.includes('already exists')) {
-          errorMessage = "This mood board has already been saved.";
-          // Don't show error toast for duplicates, just set as saved
-          setIsSaved(true);
-          return;
-        }
-      }
-      
       toast({
         title: "Save Failed",
-        description: errorMessage,
+        description: "There was an error saving your mood board. Please try again.",
         variant: "destructive"
       });
     } finally {
